@@ -1,13 +1,13 @@
 ; cbm2 kernal 04av.b
 ; modified for v9958-cart at $D900-$D907, ROM at $1000
 ; comments & copyright Vossi 02/2019
-; version 1.0
-; - fixed id-check to output 3, 5 or x
+; version 1.1
+; - cleanup: hex tables
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
 ; switches:
-PAL = 0			; PAL=1, NTSC=0		selects V9938/58 PAL RGB-output, NTSC has a higher picture
+PAL = 1			; PAL=1, NTSC=0		selects V9938/58 PAL RGB-output, NTSC has a higher picture
 ; constants:
 FILL					= $00		; fills free memory areas with $00
 VDPREG18				= $0d		; VDP reg 18 value (V/H screen adjust, $0d = Sony PVM 9")
@@ -909,7 +909,7 @@ le6f1:	lda #$00
 le6f8:	sei
 		dey
 		bmi le6ff
-		jmp le7be
+		jmp addkey
 le6ff:	ldy #$00
 le701:	iny
 		sty $03b7
@@ -921,7 +921,7 @@ le701:	iny
 		sta $c2
 		stx $c3
 		ldx #$03
-le717:	lda le7a6,x
+le717:	lda keword,x
 		jsr lffd2
 		dex
 		bpl le717
@@ -981,7 +981,7 @@ le787:	ldx #$0e
 		txa
 		pha
 		ldx #$06
-le78d:	lda le7aa,x
+le78d:	lda cdword,x
 		beq le79c
 		jsr lffd2
 		dex
@@ -994,24 +994,14 @@ le79c:	iny
 		beq le772
 		lda #$2b
 		bne le73e
-le7a6:	jsr $4559
-		!byte $4b
-le7aa:	plp
-		bit $52
-		pha
-		!byte $43
-		!byte $2b
-		!byte $22
-		brk
-		and #$33
-		and ($00),y
-		and #$34
-		!byte $33
-		brk
-		and #$31
-		!byte $34
-		!byte $31
-le7be:	!byte $48
+
+keword:	!pet " yek"
+cdword:	!pet "($rhc+",$22,$00
+		!pet ")31",$00
+		!pet ")43",$00
+		!pet ")141"
+
+addkey:	pha
 		tax
 		sty $d9
 		lda $00,x
@@ -1132,19 +1122,19 @@ le896:	lsr
 		pla
 		bcc le8f3
 le8a9:	sty $e1
-		ldx lea29,y
+		ldx normtb,y
 		pla
 		asl
 		asl
 		asl
 		bcc le8c2
 		bmi le8c5
-		ldx lea89,y
+		ldx shfttb,y
 		lda $cc
 		beq le8c5
 		ldx leae9,y
 		bne le8c5
-le8c2:	ldx leb49,y
+le8c2:	ldx ctltbl,y
 le8c5:	cpx #$ff
 		beq le8f5
 		cpx #$e0
@@ -1248,14 +1238,15 @@ le97a:	asl
 		lda escvct,x
 		pha
 		rts
+							; ***** escape-routines table *****		
 escvct:	!byte $22,$ea											; esc, a
 		!byte $ba,$e9											; esc, b
 		!byte $1f,$ea
 		!byte $6c,$e6
 		!byte $ee,$e9
 		!byte $e5,$e9
-		!byte <(VdpTextColor-1),>(VdpTextColor-1)				; esc, g $d5,$e9
-		!byte <(VdpBackgroundColor-1),>(VdpBackgroundColor-1)	; esc, h $d7,$e9
+		!byte <(VdpTextColor-1),>(VdpTextColor-1)				; ***** PATCHED ***** esc, g $d5,$e9
+		!byte <(VdpBackgroundColor-1),>(VdpBackgroundColor-1)	; ***** PATCHED ***** esc, h $d7,$e9
 		!byte $57,$e6
 		!byte $31,$e5
 		!byte $43,$e5
@@ -1271,9 +1262,10 @@ escvct:	!byte $22,$ea											; esc, a
 		!byte $db,$e9
 		!byte $bc,$e6
 		!byte $ca,$e6
-		!byte <(VdpIdent-1),>(VdpIdent-1)						; esc, x $78,$e9
+		!byte <(VdpIdent-1),>(VdpIdent-1)						; ***** PATCHED ***** esc, x $78,$e9
 		!byte $07,$ea
 		!byte $f8,$e9
+
 sethtt:	clc
 		!byte $24			; skip one byte - bit $xx
 sethtb:	sec
@@ -1329,271 +1321,72 @@ lea12:	sta $d801
 		lda #$ff
 		sta $039a
 		rts
-lea29:	cpx #$1b
-		ora #$ff
-		brk
-		ora ($e1,x)
-		and ($51),y
-		eor ($5a,x)
-		!byte $ff
-		!byte $e2
-		!byte $32
-		!byte $57
-		!byte $53
-		cli
-		!byte $43
-		!byte $e3
-		!byte $33
-		eor $44
-		lsr $56
-		cpx $34
-		!byte $52
-		!byte $54
-		!byte $47
-		!byte $42
-		sbc $35
-		rol $59,x
-		pha
-		lsr $37e6
-		eor $4a,x
-		eor le720
-		sec
-		eor #$4b
-		bit le82e
-		and $4c4f,y
-		!byte $3b
-		!byte $2f
-		sbc #$30
-		and $5b50
-		!byte $27
-		ora ($3d),y
-lea67:	!byte $5f
-		eor $de0d,x
-		sta ($9d),y
-		ora $0214,x
-		!byte $ff
-		!byte $13
-		!byte $3f
-		!byte $37
-		!byte $34
-		and ($30),y
-		!byte $12
-		!byte $04
-		sec
-		and $32,x
-		rol $2a8e
-		and $3336,y
-		bmi lea87
-		!byte $2f
-		!byte $2d
-		!byte $2b
-lea87:	!byte $0d
-		!byte $ff
-lea89:	nop
-		!byte $1b
-		!byte $89
-		!byte $ff
-		brk
-		ora ($eb,x)
-		and ($d1,x)
-		cmp ($da,x)
-		!byte $ff
-		cpx $d740
-		!byte $d3
-		cld
-		!byte $c3
-		sbc $c523
-		cpy $c6
-		dec $ee,x
-		bit $d2
-		!byte $d4
-		!byte $c7
-		!byte $c2
-		!byte $ef
-		and $5e
-		cmp $cec8,y
-		beq lead5
-		cmp $ca,x
-		!byte $cd
-		!byte $a0
-		!byte $f1
-		rol
-		cmp #$cb
-		!byte $3c
-		rol $28f2,x
-		!byte $cf
-		cpy $3f3a
-		!byte $f3
-		and #$2d
-		bne leb1f
-		!byte $22
-		ora ($2b),y
-leac7:	!byte $5c
-		eor $de8d,x
-		sta ($9d),y
-		ora $8294,x
-		!byte $ff
-		!byte $93
-		!byte $3f
-		!byte $37
-		!byte $34
-lead5:	and ($30),y
-		!byte $92
-		sty $38
-		and $32,x
-		rol $2a0e
-		and $3336,y
-		bmi lea67
-		!byte $2f
-		and $8d2b
-		!byte $ff
-leae9:	nop
-		!byte $1b
-		!byte $89
-		!byte $ff
-		brk
-		ora ($eb,x)
-		and ($d1,x)
-		cmp ($da,x)
-		!byte $ff
-		cpx $d740
-		!byte $d3
-		cld
-		cpy #$ed
-		!byte $23
-		cmp $c4
-		dec $c3
-		inc $d224
-		!byte $d4
-		!byte $c7
-		!byte $c2
-		!byte $ef
-		and $5e
-		cmp $ddc8,y
-		beq leb35
-		cmp $ca,x
-		!byte $cd
-		!byte $a0
-		!byte $f1
-		rol
-		cmp #$cb
-		!byte $3c
-		rol $28f2,x
-		!byte $cf
-		dec $3a,x
-		!byte $3f
-leb1f:	!byte $f3
-		and #$2d
-		bne leb7f
-		!byte $22
-		ora ($2b),y
-		!byte $5c
-		eor $de8d,x
-		sta ($9d),y
-		!byte $1a
-		sty $82,x
-		!byte $ff
-		!byte $93
-		!byte $3f
-		!byte $37
-		!byte $34
-leb35:	and ($30),y
-		!byte $92
-		!byte $04
-		sec
-		!byte $35
-		!byte $32
-		rol $2a0e
-		and $3336,y
-		bmi leac7
-leb44:	!byte $2f
-		and $8d2b
-		!byte $ff
-leb49:	!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		lda ($11,x)
-		ora ($1a,x)
-		!byte $ff
-		!byte $ff
-		ldx #$17
-		!byte $13
-		clc
-		!byte $03
-		!byte $ff
-		!byte $a3
-		ora $04
-		asl $16
-		!byte $ff
-		ldy $12
-		!byte $14
-		!byte $07
-		!byte $02
-		!byte $ff
-		lda $a7
-		ora $0e08,y
-		!byte $ff
-		ldx $0a15,y
-		!byte $0d
-		!byte $ff
-		!byte $ff
-		!byte $bb
-		ora #$0b
-		!byte $ce
-		!byte $ff
-		!byte $ff
-		!byte $bf
-		!byte $0f
-		!byte $0c
-		!byte $dc
-		!byte $ff
-leb7f:	!byte $ff
-		ldy $10bc
-		cpy lffa8
-		lda #$df
-		tsx
-		!byte $ff
-		ldx $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $ff
-		!byte $b7
-		ldy $b1,x
-		bcs leb44
-		!byte $ff
-		clv
-		lda $b2,x
-		ldx lffbd
-		lda $b3b6,y
-		!byte $db
-		!byte $ff
-		!byte $ff
-		!byte $af
-		tax
-		!byte $ab
-		!byte $ff
-		!byte $ff
 
-runtb:	!byte $44,$cc,$22,$2a,$0d,$52,$55,$4e,$0d	; shift-run text: dload"* CR run CR
+normtb:	!byte $e0,$1b,$09,$ff,$00,$01,$e1,$31		; ***** keyboard code table -shift ***** 
+		!byte $51,$41,$5a,$ff,$e2,$32,$57,$53
+		!byte $58,$43,$e3,$33,$45,$44,$46,$56
+		!byte $e4,$34,$52,$54,$47,$42,$e5,$35
+		!byte $36,$59,$48,$4e,$e6,$37,$55,$4a
+		!byte $4d,$20,$e7,$38,$49,$4b,$2c,$2e
+		!byte $e8,$39,$4f,$4c,$3b,$2f,$e9,$30
+		!byte $2d,$50,$5b,$27,$11,$3d,$5f,$5d
+		!byte $0d,$de,$91,$9d,$1d,$14,$02,$ff
+		!byte $13,$3f,$37,$34,$31,$30,$12,$04
+		!byte $38,$35,$32,$2e,$8e,$2a,$39,$36
+		!byte $33,$30,$03,$2f,$2d,$2b,$0d,$ff
 
-ldtb2:	!byte $00,$50,$a0,$f0,$40,$90,$e0,$30		; start address-table  screen lines low
+shfttb:	!byte $ea,$1b,$89,$ff,$00,$01,$eb,$21		; ***** keyboard code table +shift ***** 
+		!byte $d1,$c1,$da,$ff,$ec,$40,$d7,$d3
+		!byte $d8,$c3,$ed,$23,$c5,$c4,$c6,$d6
+		!byte $ee,$24,$d2,$d4,$c7,$c2,$ef,$25
+		!byte $5e,$d9,$c8,$ce,$f0,$26,$d5,$ca
+		!byte $cd,$a0,$f1,$2a,$c9,$cb,$3c,$3e
+		!byte $f2,$28,$cf,$cc,$3a,$3f,$f3,$29
+		!byte $2d,$d0,$5b,$22,$11,$2b,$5c,$5d
+		!byte $8d,$de,$91,$9d,$1d,$94,$82,$ff
+		!byte $93,$3f,$37,$34,$31,$30,$92,$84
+		!byte $38,$35,$32,$2e,$0e,$2a,$39,$36
+		!byte $33,$30,$83,$2f,$2d,$2b,$8d,$ff
+
+leae9:	!byte $ea,$1b,$89,$ff,$00,$01,$eb,$21		; ***** keyboard code table graphics+shift ***** 
+		!byte $d1,$c1,$da,$ff,$ec,$40,$d7,$d3
+		!byte $d8,$c0,$ed,$23,$c5,$c4,$c6,$c3
+		!byte $ee,$24,$d2,$d4,$c7,$c2,$ef,$25
+		!byte $5e,$d9,$c8,$dd,$f0,$26,$d5,$ca
+		!byte $cd,$a0,$f1,$2a,$c9,$cb,$3c,$3e
+		!byte $f2,$28,$cf,$d6,$3a,$3f,$f3,$29
+		!byte $2d,$d0,$5b,$22,$11,$2b,$5c,$5d
+		!byte $8d,$de,$91,$9d,$1a,$94,$82,$ff
+		!byte $93,$3f,$37,$34,$31,$30,$92,$04
+		!byte $38,$35,$32,$2e,$0e,$2a,$39,$36
+		!byte $33,$30,$83,$2f,$2d,$2b,$8d,$ff
+
+ctltbl:	!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$a1		; ***** keyboard code table control-mode ***** 
+		!byte $11,$01,$1a,$ff,$ff,$a2,$17,$13
+		!byte $18,$03,$ff,$a3,$05,$04,$06,$16
+		!byte $ff,$a4,$12,$14,$07,$02,$ff,$a5
+		!byte $a7,$19,$08,$0e,$ff,$be,$15,$0a
+		!byte $0d,$ff,$ff,$bb,$09,$0b,$ce,$ff
+		!byte $ff,$bf,$0f,$0c,$dc,$ff,$ff,$ac
+		!byte $bc,$10,$cc,$a8,$ff,$a9,$df,$ba
+		!byte $ff,$a6,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$b7,$b4,$b1,$b0,$ad,$ff,$b8
+		!byte $b5,$b2,$ae,$bd,$ff,$b9,$b6,$b3
+		!byte $db,$ff,$ff,$af,$aa,$ab,$ff,$ff
+
+runtb:	!byte $44,$cc,$22,$2a,$0d,$52,$55,$4e,$0d	; ***** shift-run text: dload"* CR run CR *****
+
+ldtb2:	!byte $00,$50,$a0,$f0,$40,$90,$e0,$30		; ***** start address-table  screen lines low *****
 		!byte $80,$d0,$20,$70,$c0,$10,$60,$b0
 		!byte $00,$50,$a0,$f0,$40,$90,$e0,$30
 		!byte $80
 
-ldtb1:	!byte $d0,$d0,$d0,$d0,$d1,$d1,$d1,$d2		; start address-table  screen lines high
+ldtb1:	!byte $d0,$d0,$d0,$d0,$d1,$d1,$d1,$d2		; ***** start address-table  screen lines high *****
 		!byte $d2,$d2,$d3,$d3,$d3,$d4,$d4,$d4
 		!byte $d5,$d5,$d5,$d5,$d6,$d6,$d6,$d7
 		!byte $d7
 
-ctable:	!byte $10,$e3								; address-table control routines
+ctable:	!byte $10,$e3								; ***** address-table control routines *****
 		!byte $10,$e3
 		!byte $10,$e3
 		!byte $1b,$e6
@@ -1625,24 +1418,25 @@ ctable:	!byte $10,$e3								; address-table control routines
 		!byte $30,$e3
 		!byte $10,$e3
 		!byte $10,$e3
+
 keylen:	!byte $03,$04,$06,$06,$05,$05,$04,$09	; ***** PATCHED ***** table length of F-keys commands
 		!byte $08,$07
-												; ***** PATCHED *****table F-key commands
-keydef:	!byte $52,$55,$4e								; run
-		!byte $4c,$49,$53,$54							; list
-		!byte $44,$4c,$4f,$41,$44,$22					; dload"
-		!byte $44,$53,$41,$56,$45,$22					; dsave"
-		!byte $50,$52,$49,$4e,$54						; print
-		!byte $43,$48,$52,$24,$28						; chr$(
-		!byte $42,$41,$4e,$4b							; bank
-		!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59		; directory
-		!byte $53,$43,$52,$41,$54,$43,$48,$22			; scratch"
-		!byte $48,$45,$41,$44,$45,$52,$22				; header"
+												; ***** PATCHED ***** table F-key commands
+keydef:	!pet "run"				; run
+		!pet "list"				; list
+		!pet "dload",$22		; dload"
+		!pet "dsave",$22		; dsave"
+		!pet "print"			; print
+		!pet "chr$("			; chr$(
+		!pet "bank"				; bank
+		!pet "directory"		; directory
+		!pet "scratch",$22		; scratch"
+		!pet "header",$22		; header"
 
-;keylen:	!byte $05,$04,$06,$06,$05,$06,$04,$09	; ***** kernal 04a table length of F-keys commands *****
+;keylen:!byte $05,$04,$06,$06,$05,$06,$04,$09	; ***** kernal 04a table length of F-keys commands *****
 ;		!byte $07,$05
 												; ***** kernal04a table F-key commands *****
-;keydef:	!byte $50,$52,$49,$4e,$54						; print
+;keydef:!byte $50,$52,$49,$4e,$54						; print
 ;		!byte $4c,$49,$53,$54							; list
 ;		!byte $44,$4c,$4f,$41,$44,$22					; dload"
 ;		!byte $44,$53,$41,$56,$45,$22					; dsave"
@@ -1758,7 +1552,7 @@ bszei1:	ldx $dd			; unknown patch
 bszeib:	bit $039b
 		rts
 ; $eceb ********************************************************************************************
-VdpInitData:			; ***** VDP init data table *****
+VdpInitData:						; ***** VDP init data table *****
 		!byte $04,$80,$50,$81,$03,$82,$2f,$83
 		!byte $02,$84,COLREG1,$87,$08,$88,VDPREG9,$89
 		!byte $00,$8a,$00,$90,VDPREG18,$92,$00,$40				; last 2 bytes start VRAM write! 
@@ -1776,7 +1570,7 @@ VdpInitData:			; ***** VDP init data table *****
 		; reg 14: $00 VRAM write addresss bit#0-2 = A14-A16
 		; reg 16: $00 color palette pointer to color 0
 VdpInitDataEnd:
-VdpFontSwitch:						; ***** switch font text / graphic  *****
+VdpFontSwitch:						; ***** switch font text / graphics  *****
 		sta $de06							; tri1 + creg (instruction moved from crtset)
 VdpFont:							; ***** copy font to pattern generator table *****
 		lda # >FontData						; load highbyte font data address
@@ -1809,8 +1603,7 @@ VdpFont:							; ***** copy font to pattern generator table *****
 		sta vdp_reverse						; set reverse xor byte
 		bne -
 +		rts
-; ***** Color Palette - 16 colors, 2 byte/color: RB, 0G each 3bit -> C64 VICII-colors *****
-VdpCopyPalette						; ***** copy color-palette
+VdpCopyPalette						; ***** copy color-palette *****
 -		lda VdpPaletteData,x				; X already 0, palette pointer already 0 from init-data
 		sta VDPPalette
 		inx
@@ -1818,19 +1611,6 @@ VdpCopyPalette						; ***** copy color-palette
 		bne - 
 		lda # COLREG1
 		sta vdp_color						; write color mirror
-		rts
-VdpTextColor:						; ***** ESC-G rotate text-color *****
-		lda vdp_color						; load color mirror
-		clc
-		adc #$10							; increase high nibble = textxcolor
-		sta vdp_color						; write to mirror
-		!byte $2c							; skips two bytes! bit $xxxx
-VdpBackgroundColor:					; ***** ESC-H rotate text-color *****
-		inc vdp_color						; increase low nibble = background color
-		lda vdp_color						; load color mirror
-		sta VDPControl						; write new color value
-		lda # (7 | $80)						; 
-		sta VDPControl						; write register 7
 		rts
 VdpPrint:							; ***** print char to VRAM *****
 		jsr VdpWriteChar					; sub write char to screen - char in A, column in $cb
@@ -1852,7 +1632,7 @@ VdpCursorClear:						; ***** restore char under old cursor position
 		lda #$00
 		sta vdp_cursor_flag					; clear cursor reverse flag
 		rts
-VdpWriteChar:
+VdpWriteChar:						; ***** sub: write char to VRAM for VdpPrint, VdpCursor *****
 		pha									; safe char on stack
 		lda $cb								; load cursor column
 		clc
@@ -1883,7 +1663,20 @@ VdpMoveLine:						; ***** move screen line (for scrolling) *****
 		iny
 		bcc -
 		jmp pagres			; forward -> sub: bank restore
-VdpIdent:						; *** read status register and returns vdp ident
+VdpTextColor:						; ***** ESC-G rotate text-color *****
+		lda vdp_color						; load color mirror
+		clc
+		adc #$10							; increase high nibble = textxcolor
+		sta vdp_color						; write to mirror
+		!byte $2c							; skips two bytes! bit $xxxx
+VdpBackgroundColor:					; ***** ESC-H rotate text-color *****
+		inc vdp_color						; increase low nibble = background color
+		lda vdp_color						; load color mirror
+		sta VDPControl						; write new color value
+		lda # (7 | $80)						; 
+		sta VDPControl						; write register 7
+		rts
+VdpIdent:							; ***** ESC-X read status register / vdp ident and print chip-type *****
 		lda # 1
 		sta VDPControl						; write new color value
 		lda # (15 | $80)						; 
@@ -1901,6 +1694,7 @@ prntid:	stx $d04f
 		rts
 ++		tax									; chip is unknown - prints a 'x'
 		bne prntid
+; ***** Color Palette - 16 colors, 2 byte/color: RB, 0G each 3bit -> C64 VICII-colors *****
 VdpPaletteData:
 		!byte $00,$00,$77,$07,$70,$01,$17,$06	;	0=black		1=white		2=red		3=cyan
 		!byte $56,$02,$32,$06,$06,$02,$72,$07	;	4=violet	5=green		6=blue		7=yellow
@@ -1908,23 +1702,23 @@ VdpPaletteData:
 		!byte $33,$03,$54,$07,$27,$04,$55,$05	;	c=grey		d=litegreen	e=lightblue	f=lightgrey
 VdpPaletteDataEnd:
 ; 278-24(init.p)-62(font)-17(palette)-8(t.color)-13(b.color)-6(print)-23(c.set)-8(c.clear)
-; -24(writechar)-27(moveline)-32(pal.data)-ident(32) 2 bytes free
+; -24(writechar)-27(moveline)-32(pal.data)-ident(34) 0 bytes free
 *= $ee00
 		jsr ioinit
 		jsr restor
 		jsr jcint
-monoff:	jsr lffcc		; ***** monitor cold-boot (no basic)
+monoff:	jsr lffcc		; ***** monitor cold-boot (no basic) *****
 		lda #$5a
 		ldx #$00
 		ldy #$ee
 		jsr lfbca
 		cli
-timc:	lda #$c0		; ***** monitor start sys 60950
+timc:	lda #$c0		; ***** monitor start sys 60950 *****
 		sta $0361
 		lda #$40
 		sta $bd
 		bne lee31
-timb:	jsr lffcc		; ***** monitor - break-vector
+timb:	jsr lffcc		; ***** monitor - break-vector *****
 		lda #$53
 		sta $bd
 		cld
@@ -2380,59 +2174,22 @@ lf1ba:	jsr lffcc
 		lda #$00
 		clc
 		jmp lffc3
-lf1c3:	ora $2f49
-		!byte $4f
-		jsr $5245
-		!byte $52
-		!byte $4f
-		!byte $52
-		jsr $0da3
-		!byte $53
-		eor $41
-		!byte $52
-		!byte $43
-		pha
-		eor #$4e
-		!byte $47
-		ldy #$46
-		!byte $4f
-		!byte $52
-		ldy #$0d
-		jmp $414f
-		!byte $44
-		eor #$4e
-		!byte $c7
-		ora $4153
-		lsr $49,x
-		lsr $a047
-		ora $4556
-		!byte $52
-		eor #$46
-		eor $4e49,y
-		!byte $c7
-		ora $4f46
-		eor $4e,x
-		!byte $44
-		ldy #$0d
-		!byte $4f
-		!byte $4b
-		sta $2a0d
-		rol
-		jsr $4f4d
-		lsr $5449
-		!byte $4f
-		!byte $52
-		jsr $2e31
-		!byte $30,$20
-		rol
-		rol
-		sta $420d
-		!byte $52
-		eor $41
-		!byte $cb
+
+ms1:	!byte $0d								; ***** system-messages table *****
+		!pet "i/o error ",$a3,$0d
+		!pet "searching",$a0
+		!pet "for",$a0,$0d
+		!pet "loadin",$c7,$0d
+		!pet "saving",$a0,$0d
+		!pet "verifyin",$c7,$0d
+		!pet "found",$a0,$0d
+		!pet "ok",$8d,$0d
+		!pet "** monitor 1.0 **",$8d,$0d
+		!pet "brea",$cb
+
 lf21c:	bit $0361
 		bpl lf22e
-lf221:	lda lf1c3,y
+lf221:	lda ms1,y
 		php
 		and #$7f
 		jsr lffd2
@@ -3500,41 +3257,34 @@ lfad7:	ldx $01
 		lda #$fe
 		sta $036b
 		rts
-		sbc #$fb
-		and ($ee,x)
-		tax
-		!byte $fc
-		!byte $bf
-		inc $ed,x
-		sbc $49,x
-		sbc $a3,x
-		sbc $a6,x
-		inc $9c,x
-		!byte $f4
-		inc $6bf4
-		sbc lf43d,y
-		!byte $7f
-		inc $46,x
-		!byte $f7
-		jmp $77f8
-		inc le01f
-		!byte $1f
-		cpx #$74
-		!byte $f2
-lfb23:	!byte $80
-		!byte $f2
-		asl
-		!byte $f3
-		!byte $97
-		!byte $f2
-		!byte $ab
-		!byte $f2
-		!byte $af
-		!byte $f2
-		!byte $34
-		!byte $f2
-		bmi lfb23
-		jmp ($0304)
+
+jmptab:	!byte $e9, $fb		; ***** standard vector table *****
+		!byte $21, $ee
+		!byte $aa, $fc
+		!byte $bf, $f6
+		!byte $ed, $f5
+		!byte $49, $f5
+		!byte $a3, $f5
+		!byte $a6, $f6
+		!byte $9c, $f4
+		!byte $ee, $f4
+		!byte $6b, $f9
+		!byte $3d, $f4
+		!byte $7f, $f6
+		!byte $46, $f7
+		!byte $4c, $f8
+		!byte $77, $ee
+		!byte $1f, $e0
+		!byte $1f, $e0
+		!byte $74, $f2
+		!byte $80, $f2
+		!byte $0a, $f3
+		!byte $97, $f2
+		!byte $ab, $f2
+		!byte $af, $f2
+		!byte $34, $f2
+		!byte $30, $f2
+tabend:	jmp ($0304)
 lfb34:	sta $9d
 		lda $00,x
 		sta $90
@@ -3614,7 +3364,7 @@ lfbca:	stx $03f8
 		lda #$5a
 		sta $03fb
 		rts
-nirq:	pha				; ***** irq-routine
+nirq:	pha				; ***** irq-routine *****
 		txa
 		pha
 		tya
@@ -3625,7 +3375,7 @@ nirq:	pha				; ***** irq-routine
 		bne brkirq
 		jmp ($0300)			; jump to irq vector (yirq = $fbe9)
 brkirq:	jmp ($0302)			; jump to break vector (timb = $ee21)
-yirq:	lda $01			; ***** irq-routine (irq-vector)
+yirq:	lda $01			; ***** irq-routine (irq-vector) *****
 		pha
 		cld
 		lda $de07
@@ -4104,7 +3854,7 @@ lffb1:	jmp ($0330)
 lffb4:	jmp ($0332)
 		jmp lfb4a
 		jmp lfb43
-lffbd:	jmp lfb34
+		jmp lfb34
 lffc0:	jmp ($0306)
 lffc3:	jmp ($0308)
 lffc6:	jmp ($030a)

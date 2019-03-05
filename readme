@@ -2,6 +2,9 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
+version 1.1
+- cleanup: hex-tables
+
 version 1.0
 - fixed id-check to output 3, 5 or x
 
