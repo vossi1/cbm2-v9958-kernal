@@ -1,9 +1,9 @@
+
 ; cbm2 kernal 04av.b
 ; modified for v9958-cart at $D900-$D907, ROM at $1000
 ; comments & copyright Vossi 02/2019
-; version 0.4
-; - added VDP routines
-; - move line
+; version 0.5
+; - first version that boots up on color card
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
@@ -17,7 +17,6 @@ COLREG1					= $16		; color / background+backdrop color
 COLREG2					= $a6		; blink color / background color
 ; init-colors: 	0 transparent, 1 black, 2 green, 3 light-green, 4 blue, 5 light-blue, 6 dark-red, 7 cyan
 ;				8 red, 9 light-red, a yellow, b light-yellow, c dark-green, d pink, e grey, f white 
-VDPMESSAGEPOS			= 80 - (VdpMessageEnd - VdpMessage)
 ; addresses:
 VDPAddress				= $d900
 PatternTable			= $1000
@@ -1763,18 +1762,23 @@ VdpInit:				; ***** init VDP - write register and clear VRAM *****
 		ldx #$00							; reset X to first data
 -		lda VdpInitData,x					; load data from table
 		sta VDPControl						; write to control port - first value, second reg|80
+		nop
+		nop
 		inx
 		cpx # VdpInitDataEnd - VdpInitData	; end of table reached?
 		bne -								; last 2 bytes $00,$40 inits VRAM write a $0000
 		tay									; move last value $40 to Y as $4000 VRAM counter
-		lda #$00							; VRAM init value = $00
+		lda #$20							; VRAM screen table init value = $20 'space' 
 		tax									; resets index X to $00
 -		sta VDPRamWrite						; write to VRAM
 		pha 
 		pla									; wait 3+4 cycles = 3.5us for VDP (minimum CS high = 8us)
 		inx
 		bne -
-		dey
+		cpy #$37							; $900 end of screen table reached 
+		bne + 
+		txa									; clear color table and rest of VRAM with $00
++		dey
 		bne -								; $4000 bytes cleared?
 									; * copy color-palette
 -		lda VdpPaletteData,x				; X already 0, palette pointer already 0 from init-data
@@ -1784,17 +1788,6 @@ VdpInit:				; ***** init VDP - write register and clear VRAM *****
 		bne - 
 		
 		jsr VdpFont							; copy font to VRAM
-									; * print vdp start message
-		lda # VDPMESSAGEPOS					; load start message column
-		sta VDPControl
-		lda # (>ScreenTable) | $40			; higbyte VRAM address | $40 for write
-		sta VDPControl
-		ldx #$00
--		lda VdpMessage,x
-		sta VDPRamWrite
-		inx									; increase counter
-		cpx # VdpMessageEnd - VdpMessage 
-		bne -								; message end reached?
 		
 		jmp crtint			; forward -> sub: init crt-controller
 VdpFontSwitch:						; ***** switch font text / graphic  *****
@@ -1811,9 +1804,11 @@ VdpFont:							; ***** copy font to pattern generator table *****
 		sta VDPControl						; write highbyte pattern table to VDP
 		sty vdp_reverse						; resert data reverse byte
 		sty vdp_copy_pointer				; set lowbyte font data to $00 
-		ldx # >(FontSize * 2)				; copy 2 x font (normal+reverse)
--		lda(vdp_copy_pointer),y				; load font data
-		eor vdp_reverse						; reverse second half of font
+		ldx # (>FontSize) * 2				; copy 2 x font (normal+reverse)
+-		lda vdp_reverse						; reverse second half of font with eor
+		eor(vdp_copy_pointer),y				; load font data
+		pha
+		pla
 		sta VDPRamWrite						; write to VDP
 		iny
 		bne -
@@ -1858,8 +1853,6 @@ VdpMoveLine:						; ***** move screen line (for scrolling) *****
 		iny
 		bcc -
 		jmp pagres			; forward -> sub: bank restore
-VdpMessage !scr "CBM2 V9958-Card (c) Vossi 2019"
-VdpMessageEnd:		
 ; 245-29(init+cram)-17(palette+jmp)-23(printmess)-59(font)-29(moveline)-30(message) bytes free
 *= $ee00
 		jsr ioinit
