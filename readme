@@ -2,5 +2,5 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
-version 0.5
-- first version that boots up on color card ;)
+version 0.6
+- copys font from eprom
