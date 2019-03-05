@@ -2,5 +2,5 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
-version 0.1
-- free some memory
+version 0.2
+- removed  unused labels with my tool DASM6502-RUL
