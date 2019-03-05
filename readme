@@ -2,5 +2,6 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
-version 0.7
-- added esc-keys for color change
+version 0.8
+- added solid software cursor
+- cleanup source
