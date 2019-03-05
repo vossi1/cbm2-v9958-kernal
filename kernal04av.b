@@ -1,8 +1,8 @@
 ; cbm2 kernal 04av.b
 ; modified for v9958-cart at $D900-$D907, ROM at $1000
 ; comments & copyright Vossi 02/2019
-; version 1.1
-; - cleanup: hex tables
+; version 1.2
+; - renamed labels
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
@@ -41,45 +41,45 @@ FontSize				= $0400
 !addr vdp_cursor_char	= $f6				; character under cursor
 
 !initmem FILL
-*= $e000
-		jmp monoff
+*= $e000				; ***** jump-table *****
+jmonon:	jmp monoff			; sub: monitor cold-boot (basic off)
 		nop
 jcint:	jmp cint			; sub: initialize $e044
-le007:	jmp le0fe
-le00a:	jmp le179
-le00d:	jmp prt
-le010:	jmp le03f
-le013:	jmp le865
-		jmp le0da
-le019:	jmp le025
-le01c:	jmp le03a
-le01f:	jmp le970
-le022:	jmp le6f8
-le025:	bcs le035
+jlp2:	jmp lp2				; sub: get char from keybuffer in A
+jloop5:	jmp loop5			; sub: get char from screen
+jprt:	jmp prt				; sub: print char from A to screen
+jscror:	jmp scrorg			; sub: max count of columns = X, lines = Y
+jkey:	jmp key				; sub: read keyboard to buffer
+jmvcur:	jmp movcur			; sub: write cursor pos to 6845 reg 14/15
+jplot:	jmp plot			; sub: read/write x/y cursor position
+jiobas:	jmp iobase			; sub: i/o base-address to X/Y
+jescrt:	jmp escape			; sub: escape functions
+jfunky:	jmp keyfun			; sub: vector for F-keys
+plot:	bcs rdplt
 		stx $ca
 		stx $cf
 		sty $cb
 		sty $ce
-		jsr le0cd
-		jsr le0da
-le035:	ldx $ca
+		jsr stupt
+		jsr movcur
+rdplt:	ldx $ca
 		ldy $cb
 		rts
-le03a:	ldx #$00
+iobase:	ldx #$00
 		ldy #$dc
 		rts
-le03f:	ldx #$50
+scrorg:	ldx #$50
 		ldy #$19
 		rts
 cint:	lda #$00		; ***** initialize F-keys & screen *****			
 		ldx #$23
-le048:	sta $c2,x			; clear key-buffer
+cloop1:	sta $c2,x			; clear key-buffer
 		dex
-		bpl le048
+		bpl cloop1
 		ldx #$20
-le04f:	sta $0397,x			; clear reverse flags
+cloop2:	sta $0397,x			; clear reverse flags
 		dex
-		bpl le04f
+		bpl cloop2
 		lda #$0c			; reset repeat, cursor
 		sta $d8
 		lda # CRTCCURSOR	; ***** PATCHED ***** cursor type $00 = solid / kernal 04a: $60
@@ -90,7 +90,7 @@ le04f:	sta $0397,x			; clear reverse flags
 		sta $03b6
 		lda $c0
 		ora $c1
-		bne le0aa
+		bne noroom
 		lda $0355
 		sta $0380
 		lda $0356
@@ -99,47 +99,47 @@ le04f:	sta $0397,x			; clear reverse flags
 		ldx #$00
 		ldy #$02
 		jsr lff81
-		bcs le0aa
+		bcs noroom
 		sta $0382
 		inx
 		stx $c0
-		bne le08d
+		bne room10
 		iny
-le08d:	sty $c1
+room10:	sty $c1
 		ldy #$39
 		jsr le282
-le094:	lda keydef-1,y		; reset all 10 F-keys to standard
+kyset1:	lda keydef-1,y		; reset all 10 F-keys to standard
 		dey
 		sta ($c0),y
-		bne le094
+		bne kyset1
 		jsr pagres
 		ldy #$0a
-le0a1:	lda keylen-2+1,y
+kyset2:	lda keylen-2+1,y
 		sta $0382,y
 		dey
-		bne le0a1
-le0aa:	jsr sreset			; sub: home-home screen window full size
+		bne kyset2
+noroom:	jsr sreset			; sub: home-home screen window full size
 		jsr txcrt			; set text-mode / sub: switch crt text/graphics
 		jsr crtint		; ***** PATCHED ***** sub VDP init -> sub: init crt-controller
-le0b3:	jsr le0c1		
-le0b6:	jsr le0cf
+clsr:	jsr nxtd		
+cls10:	jsr scrset
 		jsr le227
 		cpx $dd
 		inx
-		bcc le0b6
-le0c1:	ldx $dc
+		bcc cls10
+nxtd:	ldx $dc
 		stx $ca
 		stx $cf
-le0c7:	ldy $de
+stu10:	ldy $de
 		sty $cb
 		sty $ce
-le0cd:	ldx $ca
-le0cf:	lda ldtb2,x
+stupt:	ldx $ca
+scrset:	lda ldtb2,x
 		sta $c8
 		lda ldtb1,x
 		sta $c9
 		rts
-le0da:	ldy #$0f
+movcur:	ldy #$0f
 		clc
 		lda $c8
 		adc $cb
@@ -156,8 +156,8 @@ le0da:	ldy #$0f
 		ora $d9
 		sta $d801
 		rts
-le0fe:	ldx $d6
-		beq le114
+lp2:	ldx $d6
+		beq lp3
 		ldy $039d
 		jsr le282
 		lda ($c2),y
@@ -166,13 +166,13 @@ le0fe:	ldx $d6
 		inc $039d
 		cli
 		rts
-le114:	ldy $03ab
+lp3:	ldy $03ab
 		ldx #$00
-le119:	lda $03ac,x
+lp1:	lda $03ac,x
 		sta $03ab,x
 		inx
 		cpx $d1
-		bne le119
+		bne lp1
 		dec $d1
 		tya
 		cli
@@ -188,7 +188,7 @@ loop3a:	lda $d1				; count of keys in keybuffer
 		sei
 		lda vdp_cursor_char	; load original char under cursor
 		jsr VdpCursorClear	; ***** PATCHED ***** restore char under cursor position
-		jsr le0fe			; sub: get char from keybuffer
+		jsr lp2			; sub: get char from keybuffer
 		cmp #$0d			; cariage return?
 		bne loop4			; if not cr print char and wait again
 		jsr patch4			; kernal 04a patch - switch 6845 cursor off only after return 
@@ -202,30 +202,30 @@ loop3a:	lda $d1				; count of keys in keybuffer
 		sta $d2
 		ldy $de
 		lda $cf
-		bmi le174
+		bmi lp80
 		cmp $ca
-		bcc le174
+		bcc lp80
 		ldy $ce
 		cmp $0398
-		bne le170
+		bne lp70
 		cpy $d5
-		beq le172
-le170:	bcs le183
-le172:	sta $ca
-le174:	sty $cb
-		jmp le18b
-le179:	tya
+		beq lp75
+lp70:	bcs clp2
+lp75:	sta $ca
+lp80:	sty $cb
+		jmp lop5
+loop5:	tya
 		pha
 		txa
 		pha
 		lda $d0
 		beq loop3
-		bpl le18b
-le183:	lda #$00
+		bpl lop5
+clp2:	lda #$00
 		sta $d0
 		lda #$0d
 		bne le1c4
-le18b:	jsr le0cd
+lop5:	jsr stupt
 		jsr le242
 		sta $db
 		and #$3f
@@ -287,7 +287,7 @@ le1f9:	jsr dspp
 le203:	jsr le62e
 le206:	lda $db
 		sta $0399
-		jsr le0da
+		jsr movcur
 		pla
 		tay
 		lda $d3
@@ -446,7 +446,7 @@ le323:	ldx $dc
 		bcs le338
 le329:	jsr le319
 		dec $ca
-		jmp le0cd
+		jmp stupt
 		bcs le339
 		jsr le574
 		bcs le319
@@ -460,11 +460,11 @@ le339:	jsr le587
 		sta $0397
 		rts
 		bcc le34f
-		jmp le0b3
+		jmp clsr
 le34f:	cmp $0399
 		bne le357
 		jsr sreset
-le357:	jmp le0c1
+le357:	jmp nxtd
 		ldy $cb
 		bcs le370
 le35e:	cpy $df
@@ -492,7 +492,7 @@ le37a:	ldx $ca
 le38b:	jsr le3f6
 		clc
 le38f:	inc $ca
-le391:	jmp le0cd
+le391:	jmp stupt
 		jsr le544
 		inx
 		jsr le505
@@ -524,7 +524,7 @@ le3cd:	ldx $cf
 		bcc le3d7
 		inc $cf
 le3d7:	ldx $dd
-le3d9:	jsr le0cf
+le3d9:	jsr scrset
 		ldy $de
 		cpx $ca
 		beq le3f0
@@ -564,7 +564,7 @@ le418:	jsr le42d
 		bit $039e
 		bmi le408
 le42c:	rts
-le42d:	jsr le0cf
+le42d:	jsr scrset
 		ldy $de
 		cpx $dd
 		bcs le444
@@ -699,7 +699,7 @@ le536:	jsr le4f5
 		dec $ca
 		bpl le536
 		inc $ca
-le541:	jmp le0cd
+le541:	jmp stupt
 le544:	lda $ca
 		cmp $dd
 		bcs le553
@@ -707,7 +707,7 @@ le544:	lda $ca
 		jsr le4f5
 		bcs le544
 		dec $ca
-le553:	jsr le0cd
+le553:	jsr stupt
 		ldy $df
 		sty $cb
 		bpl le561
@@ -744,7 +744,7 @@ le590:	ldy $dc
 		bcs le5a4
 		dec $ca
 		pha
-		jsr le0cd
+		jsr stupt
 		pla
 		ldy $df
 le59f:	sty $cb
@@ -771,7 +771,7 @@ le5c7:	lda $d9
 		sta $cb
 		lda $da
 		sta $ca
-		jmp le0cd
+		jmp stupt
 le5d2:	jsr le574
 		jsr le242
 		jsr le587
@@ -818,7 +818,7 @@ le62e:	cpy $df
 		bcc le63d
 		bit $039b
 		bmi le654
-le63d:	jsr le0cd
+le63d:	jsr stupt
 		jsr le574
 		bcc le654
 		jsr le4f5
@@ -831,7 +831,7 @@ le653:	clc
 le654:	rts
 le655:	jmp ($0320)
 		jsr le3cd
-		jsr le0c7
+		jsr stu10
 		inx
 		jsr le4f7
 		php
@@ -859,11 +859,11 @@ le66c:	rts
 		sta $dc
 		sec
 		ror $cf
-		jmp le0c7
+		jmp stu10
 		jsr le5a5
 le697:	jsr le22c
 		inc $ca
-		jsr le0cd
+		jsr stupt
 		ldy $de
 		jsr le4f5
 		bcs le697
@@ -906,7 +906,7 @@ le6f1:	lda #$00
 		ror
 		sta $039e
 		rts
-le6f8:	sei
+keyfun:	sei
 		dey
 		bmi le6ff
 		jmp addkey
@@ -1088,7 +1088,7 @@ le85e:	jsr pagres
 le862:	pla
 		cli
 		rts
-le865:	ldy #$ff
+key:	ldy #$ff
 		sty $e0
 		sty $e1
 		iny
@@ -1225,7 +1225,7 @@ le95a:	tya
 		lda $03a1,x
 		bit $039c
 		rts
-le970:	and #$7f
+escape:	and #$7f
 		sec
 		sbc #$41
 		cmp #$1a
@@ -2443,7 +2443,7 @@ lf43d:	lda $a1
 		ora $d6
 		beq lf49a
 		sei
-		jsr le007
+		jsr jlp2
 		clc
 		rts
 lf44d:	cmp #$02
@@ -2491,7 +2491,7 @@ lf4ab:	cmp #$03
 		jsr patch2		; jmp to 04a patch - RS232 input
 		nop
 		sta $d5
-lf4b5:	jsr le00a
+lf4b5:	jsr jloop5
 		clc
 		rts
 lf4ba:	bcs lf4c3
@@ -2525,7 +2525,7 @@ lf4d0:	jsr lffe4
 		cmp #$03
 		bne lf4fb
 		pla
-		jsr le00d
+		jsr jprt
 		clc
 		rts
 lf4fb:	bcc lf503
@@ -3442,7 +3442,7 @@ lfc69:	cli
 lfc7a:	cmp #$02
 		bne lfc81
 		jmp irq900
-lfc81:	jsr le013
+lfc81:	jsr jkey
 		jsr lf979
 		lda $de01
 		bpl lfc95
@@ -3830,7 +3830,7 @@ VdpInit:				; ***** init VDP - write register and clear VRAM *****
 		jmp lfe9d
 		jmp lfbca
 		jmp lfe33
-		jmp le022
+		jmp jfunky
 		jmp lfcab
 		jmp ioinit
 		jmp jcint
@@ -3844,7 +3844,7 @@ lff93:	jmp ($0324)
 lff96:	jmp ($0326)
 		jmp lfb78
 		jmp lfb8d
-		jmp le013
+		jmp jkey
 		jmp lfb74
 lffa5:	jmp ($0328)
 lffa8:	jmp ($032a)
@@ -3870,9 +3870,9 @@ lffe1:	jmp ($0314)
 lffe4:	jmp ($0316)
 		jmp ($0318)
 		jmp lf979
-		jmp le010
-		jmp le019
-		jmp le01c
+		jmp jscror
+		jmp jplot
+		jmp jiobas
 lfff6:	sta $00
 		rts
 		!byte $01
