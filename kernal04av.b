@@ -1,12 +1,15 @@
-; CBM2 Kernal 04.a
-; disassembled by DASM6502a v.3.1 by Marat Fayzullin
-; modified by Vossi 01/2017
+; kernal 04av.b
+; cbm2 kernal modified for the v9958 color-graphics-card
+; version 0.1
+; free some memory
+;
 !cpu 6502
+!ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
 !initmem $aa
 *= $e000
 le000:	jmp $ee09
 le003:	nop
-le004:	jmp $e044
+jcint:	jmp cint		; sub initialize $e044
 le007:	jmp $e0fe
 le00a:	jmp $e179
 le00d:	jmp $e299
@@ -33,7 +36,7 @@ le03e:	rts
 le03f:	ldx #$50
 le041:	ldy #$19
 le043:	rts
-le044:	lda #$00
+cint:	lda #$00
 le046:	ldx #$23
 le048:	sta $c2,x
 le04a:	dex
@@ -1641,7 +1644,8 @@ lec90:	brk
 lec91:	brk
 lec92:	brk
 lec93:	!byte $7f
-lec94:	bvc lecf6
+lec94:	!byte $50
+		!byte $60
 lec96:	asl
 lec97:	rol $01
 lec99:	ora $001e,y
@@ -1695,29 +1699,10 @@ lece2:	lda #$20
 lece4:	sta $d801
 lece7:	pla
 lece8:	rts				; end new code
-lece9:	tax
-lecea:	tax
-leceb:	tax
-lecec:	tax
-leced:	tax
-lecee:	tax
-lecef:	tax
-lecf0:	tax
-lecf1:	tax
-lecf2:	tax
-lecf3:	tax
-lecf4:	tax
-lecf5:	tax
-lecf6:	tax
-lecf7:	tax
-lecf8:	tax
-lecf9:	tax
-lecfa:	tax
-lecfb:	tax
-lecfc:	tax
-lecfd:	tax
-lecfe:	tax
-lecff:	tax
+
+; **************************************************************************************************
+
+*= $ed00
 led00:	ldx $dd
 led02:	cpx $dc
 led04:	bne led08
@@ -1725,253 +1710,13 @@ led06:	pla
 led07:	pla
 led08:	bit $039b
 led0b:	rts
-led0c:	tax
-led0d:	tax
-led0e:	tax
-led0f:	tax
-led10:	tax
-led11:	tax
-led12:	tax
-led13:	tax
-led14:	tax
-led15:	tax
-led16:	tax
-led17:	tax
-led18:	tax
-led19:	tax
-led1a:	tax
-led1b:	tax
-led1c:	tax
-led1d:	tax
-led1e:	tax
-led1f:	tax
-led20:	tax
-led21:	tax
-led22:	tax
-led23:	tax
-led24:	tax
-led25:	tax
-led26:	tax
-led27:	tax
-led28:	tax
-led29:	tax
-led2a:	tax
-led2b:	tax
-led2c:	tax
-led2d:	tax
-led2e:	tax
-led2f:	tax
-led30:	tax
-led31:	tax
-led32:	tax
-led33:	tax
-led34:	tax
-led35:	tax
-led36:	tax
-led37:	tax
-led38:	tax
-led39:	tax
-led3a:	tax
-led3b:	tax
-led3c:	tax
-led3d:	tax
-led3e:	tax
-led3f:	tax
-led40:	tax
-led41:	tax
-led42:	tax
-led43:	tax
-led44:	tax
-led45:	tax
-led46:	tax
-led47:	tax
-led48:	tax
-led49:	tax
-led4a:	tax
-led4b:	tax
-led4c:	tax
-led4d:	tax
-led4e:	tax
-led4f:	tax
-led50:	tax
-led51:	tax
-led52:	tax
-led53:	tax
-led54:	tax
-led55:	tax
-led56:	tax
-led57:	tax
-led58:	tax
-led59:	tax
-led5a:	tax
-led5b:	tax
-led5c:	tax
-led5d:	tax
-led5e:	tax
-led5f:	tax
-led60:	tax
-led61:	tax
-led62:	tax
-led63:	tax
-led64:	tax
-led65:	tax
-led66:	tax
-led67:	tax
-led68:	tax
-led69:	tax
-led6a:	tax
-led6b:	tax
-led6c:	tax
-led6d:	tax
-led6e:	tax
-led6f:	tax
-led70:	tax
-led71:	tax
-led72:	tax
-led73:	tax
-led74:	tax
-led75:	tax
-led76:	tax
-led77:	tax
-led78:	tax
-led79:	tax
-led7a:	tax
-led7b:	tax
-led7c:	tax
-led7d:	tax
-led7e:	tax
-led7f:	tax
-led80:	tax
-led81:	tax
-led82:	tax
-led83:	tax
-led84:	tax
-led85:	tax
-led86:	tax
-led87:	tax
-led88:	tax
-led89:	tax
-led8a:	tax
-led8b:	tax
-led8c:	tax
-led8d:	tax
-led8e:	tax
-led8f:	tax
-led90:	tax
-led91:	tax
-led92:	tax
-led93:	tax
-led94:	tax
-led95:	tax
-led96:	tax
-led97:	tax
-led98:	tax
-led99:	tax
-led9a:	tax
-led9b:	tax
-led9c:	tax
-led9d:	tax
-led9e:	tax
-led9f:	tax
-leda0:	tax
-leda1:	tax
-leda2:	tax
-leda3:	tax
-leda4:	tax
-leda5:	tax
-leda6:	tax
-leda7:	tax
-leda8:	tax
-leda9:	tax
-ledaa:	tax
-ledab:	tax
-ledac:	tax
-ledad:	tax
-ledae:	tax
-ledaf:	tax
-ledb0:	tax
-ledb1:	tax
-ledb2:	tax
-ledb3:	tax
-ledb4:	tax
-ledb5:	tax
-ledb6:	tax
-ledb7:	tax
-ledb8:	tax
-ledb9:	tax
-ledba:	tax
-ledbb:	tax
-ledbc:	tax
-ledbd:	tax
-ledbe:	tax
-ledbf:	tax
-ledc0:	tax
-ledc1:	tax
-ledc2:	tax
-ledc3:	tax
-ledc4:	tax
-ledc5:	tax
-ledc6:	tax
-ledc7:	tax
-ledc8:	tax
-ledc9:	tax
-ledca:	tax
-ledcb:	tax
-ledcc:	tax
-ledcd:	tax
-ledce:	tax
-ledcf:	tax
-ledd0:	tax
-ledd1:	tax
-ledd2:	tax
-ledd3:	tax
-ledd4:	tax
-ledd5:	tax
-ledd6:	tax
-ledd7:	tax
-ledd8:	tax
-ledd9:	tax
-ledda:	tax
-leddb:	tax
-leddc:	tax
-leddd:	tax
-ledde:	tax
-leddf:	tax
-lede0:	tax
-lede1:	tax
-lede2:	tax
-lede3:	tax
-lede4:	tax
-lede5:	tax
-lede6:	tax
-lede7:	tax
-lede8:	tax
-lede9:	tax
-ledea:	tax
-ledeb:	tax
-ledec:	tax
-leded:	tax
-ledee:	tax
-ledef:	tax
-ledf0:	tax
-ledf1:	tax
-ledf2:	tax
-ledf3:	tax
-ledf4:	tax
-ledf5:	tax
-ledf6:	tax
-ledf7:	tax
-ledf8:	tax
-ledf9:	tax
-ledfa:	tax
-ledfb:	tax
-ledfc:	tax
-ledfd:	tax
-ledfe:	tax
-ledff:	tax
-lee00:	jsr $f9fb
-lee03:	jsr $fba2
-lee06:	jsr $e004
+
+; **************************************************************************************************
+
+*= $ee00
+lee00:	jsr ioinit
+lee03:	jsr restor
+lee06:	jsr jcint
 lee09:	jsr $ffcc
 lee0c:	lda #$5a
 lee0e:	ldx #$00
@@ -3384,57 +3129,57 @@ lf98e:	sta $df01
 lf991:	rol
 lf992:	sta $a9
 lf994:	rts
-lf995:	!byte $c2
-lf996:	cmp $fea2
-lf999:	sei
-lf99a:	txs
-lf99b:	cld
+patall:	!byte $c2,$cd		; test-bytes cbm-rom
+start:	ldx #$fe		; ***** system reset *****
+lf999:	sei					; disable interrrupts
+lf99a:	txs					; init stack
+lf99b:	cld					; clear decimal flag
 lf99c:	lda #$a5
-lf99e:	cmp $03fa
-lf9a1:	bne lf9aa
-lf9a3:	lda $03fb
+lf99e:	cmp $03fa			; compare warm start flag
+lf9a1:	bne scold			; jump to cold start
+lf9a3:	lda $03fb			; load warm start flag
 lf9a6:	cmp #$5a
-lf9a8:	beq lf9f8
-lf9aa:	lda #$06
-lf9ac:	sta $96
+lf9a8:	beq swarm			; jump to warm start
+scold:	lda #$06		; ***** system cold start *****
+lf9ac:	sta $96				; init load/store variables
 lf9ae:	lda #$00
 lf9b0:	sta $97
 lf9b2:	sta $03f8
 lf9b5:	ldx #$30
-lf9b7:	ldy #$03
+sloop0:	ldy #$03
 lf9b9:	lda $97
-lf9bb:	bmi lf9d5
+lf9bb:	bmi sloop2
 lf9bd:	clc
 lf9be:	adc #$10
 lf9c0:	sta $97
 lf9c2:	inx
 lf9c3:	txa
 lf9c4:	cmp ($96),y
-lf9c6:	bne lf9b7
+lf9c6:	bne sloop0
 lf9c8:	dey
-lf9c9:	lda ($96),y
+sloop1:	lda ($96),y
 lf9cb:	dey
-lf9cc:	bmi lf9d8
-lf9ce:	cmp $f995,y
-lf9d1:	beq lf9c9
-lf9d3:	bne lf9b7
-lf9d5:	ldy #$e0
+lf9cc:	bmi sloop3
+lf9ce:	cmp patall,y		; compare cbm-rom test-bytes
+lf9d1:	beq sloop1
+lf9d3:	bne sloop0
+sloop2:	ldy #$e0
 lf9d7:	!byte $2c
-lf9d8:	ldy $97
+sloop3:	ldy $97
 lf9da:	sty $03f9
 lf9dd:	tax
-lf9de:	bpl lf9f8
-lf9e0:	jsr $f9fb
+lf9de:	bpl swarm			; jump to warm start
+lf9e0:	jsr ioinit			; sub: I/O register init $f9fb
 lf9e3:	lda #$f0
-lf9e5:	sta $c1
-lf9e7:	jsr $e004
-lf9ea:	jsr $fa88
-lf9ed:	jsr $fba2
-lf9f0:	jsr $e004
+lf9e5:	sta $c1				; start F-keys
+lf9e7:	jsr jcint			; sub: initialize $e044
+lf9ea:	jsr ramtas			; sub: ram-test $fa88
+lf9ed:	jsr restor			; sub: init standard-vectors $fba2
+lf9f0:	jsr jcint			; sub: initialize $e044
 lf9f3:	lda #$a5
-lf9f5:	sta $03fa
-lf9f8:	jmp ($03f8)
-lf9fb:	lda #$f3
+lf9f5:	sta $03fa			; save warm start flag
+swarm:	jmp ($03f8)			; jump to basic warm start $bbcc
+ioinit:	lda #$f3		; ***** i/o register init *****
 lf9fd:	sta $de06
 lfa00:	ldy #$ff
 lfa02:	sty $de05
@@ -3492,7 +3237,7 @@ lfa7f:	lda #$01
 lfa81:	ora $de01
 lfa84:	sta $de01
 lfa87:	rts
-lfa88:	lda #$00
+ramtas:	lda #$00			; ***** ram-test / vector init *****
 lfa8a:	tax
 lfa8b:	sta $0002,x
 lfa8e:	sta $0200,x
@@ -3637,7 +3382,7 @@ lfb98:	stx $0358
 lfb9b:	sty $0359
 lfb9e:	sta $035a
 lfba1:	rts
-lfba2:	ldx #$fd
+restor:	ldx #$fd
 lfba4:	ldy #$fa
 lfba6:	lda #$0f
 lfba8:	clc
@@ -4097,62 +3842,20 @@ lff3a:	nop
 lff3b:	rts
 lff3c:	cli
 lff3d:	rts
-lff3e:	tax
-lff3f:	tax
-lff40:	tax
-lff41:	tax
-lff42:	tax
-lff43:	tax
-lff44:	tax
-lff45:	tax
-lff46:	tax
-lff47:	tax
-lff48:	tax
-lff49:	tax
-lff4a:	tax
-lff4b:	tax
-lff4c:	tax
-lff4d:	tax
-lff4e:	tax
-lff4f:	tax
-lff50:	tax
-lff51:	tax
-lff52:	tax
-lff53:	tax
-lff54:	tax
-lff55:	tax
-lff56:	tax
-lff57:	tax
-lff58:	tax
-lff59:	tax
-lff5a:	tax
-lff5b:	tax
-lff5c:	tax
-lff5d:	tax
-lff5e:	tax
-lff5f:	tax
-lff60:	tax
-lff61:	tax
-lff62:	tax
-lff63:	tax
-lff64:	tax
-lff65:	tax
-lff66:	tax
-lff67:	tax
-lff68:	tax
-lff69:	tax
-lff6a:	tax
-lff6b:	tax
+
+; *************************************************************************************************
+
+*= $ff6c
 lff6c:	jmp $fe9d
 lff6f:	jmp $fbca
 lff72:	jmp $fe33
 lff75:	jmp $e022
 lff78:	jmp $fcab
-lff7b:	jmp $f9fb
-lff7e:	jmp $e004
+lff7b:	jmp ioinit
+lff7e:	jmp jcint
 lff81:	jmp $f400
 lff84:	jmp $fba9
-lff87:	jmp $fba2
+lff87:	jmp restor
 lff8a:	jmp $f660
 lff8d:	jmp $f678
 lff90:	jmp $fb5a
@@ -4191,7 +3894,7 @@ lfff0:	jmp $e019
 lfff3:	jmp $e01c
 lfff6:	sta $00
 lfff8:	rts
-lfff9:	ora ($31,x)
-lfffb:	!byte $fb
-lfffc:	!byte $97
-lfffd:	sbc $fbd6,y
+		!byte $01
+		!byte $31,$fb		; NMI vector
+		!byte $97,$f9		; RESET vector -> start
+		!byte $d6,$fb		; IRQ vector

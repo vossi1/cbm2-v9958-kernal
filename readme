@@ -1,7 +1,6 @@
-kernal04av.bin
+kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
-version 0.0
-
-original kernal
+version 0.1
+- free some memory
