@@ -2,6 +2,37 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
+version 0.9
+- check VDP-id with esc-key
+- moved VDP init to crt-init sub-start
+
 version 0.8
 - added solid software cursor
 - cleanup source
+
+version 0.7
+- added esc-keys for color change
+
+version 0.6
+- copys font from eprom
+
+version 0.5
+- first version that boots up on color card ;)
+
+version 0.4
+- added vdp routines
+- move line
+
+version 0.3
+- crt init tables
+- moved 03b -> 04a patches 
+
+version 0.2
+- removed  unused labels with my tool DASM6502-RUL
+
+version 0.1
+- free some memory
+
+version 0.0
+original kernal 
+

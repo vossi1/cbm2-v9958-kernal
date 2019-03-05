@@ -1,9 +1,9 @@
 ; cbm2 kernal 04av.b
 ; modified for v9958-cart at $D900-$D907, ROM at $1000
 ; comments & copyright Vossi 02/2019
-; version 0.8
-; - added solid software cursor
-; - cleanup source code
+; version 0.9
+; - check VDP-id with esc-key
+; - moved VDP-init to crt-init-sub start
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
@@ -15,7 +15,6 @@ VDPREG18				= $0d		; VDP reg 18 value (V/H screen adjust, $0d = Sony PVM 9")
 VDPREG9					= $80|PAL*2	; VDP reg 9 value ($80 = NTSC, $82 = PAL / 212 lines)
 CRTCCURSOR				= $00		; init crtc cursor type $00 = solid, $60 = blink 1/32
 COLREG1					= $a0		; color / background+backdrop color
-COLREG2					= $e0		; blink color / background color
 ; init-colors: 	0 transparent, 1 black, 2 green, 3 light-green, 4 blue, 5 light-blue, 6 dark-red, 7 cyan
 ;				8 red, 9 light-red, a yellow, b light-yellow, c dark-green, d pink, e grey, f white 
 ; addresses:
@@ -120,7 +119,7 @@ le0a1:	lda keylen-2+1,y
 		bne le0a1
 le0aa:	jsr sreset			; sub: home-home screen window full size
 		jsr txcrt			; set text-mode / sub: switch crt text/graphics
-		jsr VdpInit		; ***** PATCHED ***** sub VDP init -> sub: init crt-controller
+		jsr crtint		; ***** PATCHED ***** sub VDP init -> sub: init crt-controller
 le0b3:	jsr le0c1		
 le0b6:	jsr le0cf
 		jsr le227
@@ -338,8 +337,9 @@ crtset:	sty $cc			; ***** switch crt text/graphics *****
 		jsr VdpFontSwitch	; load font set to VRAM 
 		rts
 
-crtint:	ldy #$11		; ***** init crt-controller *****
-		bit $df02			; triport 2: port reg c
+crtint:	jsr VdpInit		; ***** PATCHED ***** sub VDP init
+		nop
+		nop
 		bmi crt10
 		ldy #$23
 		bvs crt10
@@ -1247,8 +1247,8 @@ le97a:	asl
 		lda escvct,x
 		pha
 		rts
-escvct:	!byte $22,$ea									; esc, a
-		!byte $ba,$e9									; esc, b
+escvct:	!byte $22,$ea											; esc, a
+		!byte $ba,$e9											; esc, b
 		!byte $1f,$ea
 		!byte $6c,$e6
 		!byte $ee,$e9
@@ -1270,7 +1270,7 @@ escvct:	!byte $22,$ea									; esc, a
 		!byte $db,$e9
 		!byte $bc,$e6
 		!byte $ca,$e6
-		!byte $78,$e9
+		!byte <(VdpIdent-1),>(VdpIdent-1)						; esc, x $78,$e9
 		!byte $07,$ea
 		!byte $f8,$e9
 sethtt:	clc
@@ -1760,8 +1760,7 @@ bszeib:	bit $039b
 VdpInitData:			; ***** VDP init data table *****
 		!byte $04,$80,$50,$81,$03,$82,$2f,$83
 		!byte $02,$84,COLREG1,$87,$08,$88,VDPREG9,$89
-		!byte $00,$8a,COLREG2,$8c,$f0,$8d,$00,$8e		; reg $90 twice to get X=$20 for clear VRAM! 
-		!byte $00,$90,$00,$90,VDPREG18,$92,$00,$40		; last 2 bytes start VRAM write! 
+		!byte $00,$8a,$00,$90,VDPREG18,$92,$00,$40				; last 2 bytes start VRAM write! 
 		; reg  0: $04 mode control 1: text mode 2 (bit#1-3 = M3 - M5)
 		; reg  1: $50 mode control 2: bit#1 16x16 sprites, bit#3-4 = M2-M1, #6 =1: display enable)
 		; reg  2: $03 name (screen) table base address $0000 ( * $400 + bit#0+1 = 1)
@@ -1816,6 +1815,8 @@ VdpCopyPalette						; ***** copy color-palette
 		inx
 		cpx # VdpPaletteDataEnd - VdpPaletteData
 		bne - 
+		lda # COLREG1
+		sta vdp_color						; write color mirror
 		rts
 VdpTextColor:						; ***** ESC-G rotate text-color *****
 		lda vdp_color						; load color mirror
@@ -1862,7 +1863,7 @@ VdpWriteChar:
 		sta VDPControl						; write VRAM address highbyte
 		pla									; get char back from stack
 ;		pha									; 7cycles = 3.5us wait for VDP
-;		pla									; ok, if no problems without (7cycles = 3.5us wait for VDP)
+;		pla									; ok without, if no problems (7cycles = 3.5us wait for VDP)
 		nop
 		sta VDPRamWrite						; write char to VRAM
 		rts
@@ -1873,7 +1874,7 @@ VdpMoveLine:						; ***** move screen line (for scrolling) *****
 		lda $c9								; load highbyte screen line pointer
 		and #$4f							; isolate low nibble + $dx to $4x for VRAM write
 		sta VDPControl						; write VRAM address highbyte
-;		pha									; ok, if no problems without (7cycles = 3.5us wait for VDP)
+;		pha									; ok without, if no problems (7cycles = 3.5us wait for VDP)
 ;		pla
 -		lda($c4),y							; load char from source line pointer
 		sta VDPRamWrite						; write to new line in VRAM
@@ -1881,14 +1882,31 @@ VdpMoveLine:						; ***** move screen line (for scrolling) *****
 		iny
 		bcc -
 		jmp pagres			; forward -> sub: bank restore
+VdpIdent:						; *** read status register and returns vdp ident
+		lda # 1
+		sta VDPControl						; write new color value
+		lda # (15 | $80)						; 
+		sta VDPControl						; write register 7
+		pha									; wait for DVP
+		pla
+		lda VDPStatus						; read status
+		and #$04							; isolate bit#4 - 0=v9938, 1=v9958 
+		lsr
+		ldy #$4e
+		clc
+		adc #$33
+		sta $d04e
+		lda #$38
+		sta $d04f
+		rts
 VdpPaletteData:
 		!byte $00,$00,$77,$07,$70,$01,$17,$06	;	0=black		1=white		2=red		3=cyan
 		!byte $56,$02,$32,$06,$06,$02,$72,$07	;	4=violet	5=green		6=blue		7=yellow
 		!byte $70,$03,$60,$02,$72,$03,$11,$01	;	8=orange	9=brown		a=lightred	b=darkgrey
 		!byte $33,$03,$54,$07,$27,$04,$55,$05	;	c=grey		d=litegreen	e=lightblue	f=lightgrey
 VdpPaletteDataEnd:
-; 278-32(init.p)-62(font)-13(palette)-8(t.color)-13(b.color)-6(print)-23(c.set)-8(c.clear)
-; -24(writechar)-26(moveline)-32(pal.data) 23 bytes free
+; 278-24(init.p)-62(font)-17(palette)-8(t.color)-13(b.color)-6(print)-23(c.set)-8(c.clear)
+; -24(writechar)-27(moveline)-32(pal.data)-ident(32) 2 bytes free
 *= $ee00
 		jsr ioinit
 		jsr restor
@@ -4036,9 +4054,9 @@ VdpInit:				; ***** init VDP - write register and clear VRAM *****
 		sta VDPControl						; write to control port - first value, second reg|80
 		inx
 		cpx # VdpInitDataEnd - VdpInitData	; $20 = end of table reached?
-		bne -								; last 2 bytes $00,$40 inits VRAM write a $0000
+		bne -								; last 2 bytes $00,$40 inits VRAM write at $0000
 		tay									; move last value $40 to Y as $4000 VRAM counter
-		txa									; VRAM screen table init value=$20 'space' already in X 
+		lsr									; shift $40 right for screen table init value=$20 'space'
 -		sta VDPRamWrite						; write to VRAM
 		pha 
 		pla									; wait 3+4 cycles = 3.5us for VDP (minimum CS high = 8us)
@@ -4051,10 +4069,11 @@ VdpInit:				; ***** init VDP - write register and clear VRAM *****
 		bne -								; $40 reached? X starts at $20 -> clears only $3fdf bytes
 		jsr VdpCopyPalette					; sub copy color palette (X already $00)
 		jsr VdpFont							; copy font to VRAM
-		lda COLREG1
-		sta vdp_color						; write color mirror
-		jmp crtint			; forward -> sub: init crt-controller
-; 0 bytes free (46 total)
+
+		ldy #$11							; two instructions moved from crtint to place the jsr
+		bit $df02							; triport 2: port reg c
+		rts
+; 1 byte free (46 total)
 *= $ff6c
 		jmp lfe9d
 		jmp lfbca
