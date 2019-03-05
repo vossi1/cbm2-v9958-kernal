@@ -1,8 +1,9 @@
+
 ; cbm2 kernal 04av.b
 ; modified for v9958-cart at $D900-$D907, ROM at $1000
 ; comments & copyright Vossi 02/2019
-; version 0.6
-; copy font from eprom
+; version 0.7
+; - added color change with esc-keys
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
@@ -12,6 +13,7 @@ PAL = 0			; PAL=1, NTSC=0		selects V9938/58 PAL RGB-output, NTSC has a higher pi
 FILL					= $00		; fills free memory areas with $00
 VDPREG18				= $0d		; VDP reg 18 value (V/H screen adjust, $0d = Sony PVM 9")
 VDPREG9					= $80|PAL*2	; VDP reg 9 value ($80 = NTSC, $82 = PAL / 212 lines)
+CRTCCURSOR				= $00		; init crtc cursor type $00 = solid, $60 = blink 1/32
 COLREG1					= $f4		; color / background+backdrop color
 COLREG2					= $94		; blink color / background color
 ; init-colors: 	0 transparent, 1 black, 2 green, 3 light-green, 4 blue, 5 light-blue, 6 dark-red, 7 cyan
@@ -79,7 +81,7 @@ le04f:	sta $0397,x			; clear reverse flags
 		bpl le04f
 		lda #$0c			; reset repeat, cursor
 		sta $d8
-		lda #$60
+		lda # CRTCCURSOR	; ***** PATCHED ***** cursor type $00 = solid / kernal 04a: $60
 		sta $d4
 		lda #$2a
 		sta $03b5			; reset address F-keys
@@ -1251,8 +1253,8 @@ escvct:	!byte $22,$ea									; esc, a
 		!byte $6c,$e6
 		!byte $ee,$e9
 		!byte $e5,$e9
-		!byte <VdpTextColor,>VdpTextColor				; esc, g $d5,$e9
-		!byte <VdpBackgroundColor,>VdpBackgroundColor	; esc, h $d7,$e9
+		!byte <(VdpTextColor-1),>(VdpTextColor-1)				; esc, g $d5,$e9
+		!byte <(VdpBackgroundColor-1),>(VdpBackgroundColor-1)	; esc, h $d7,$e9
 		!byte $57,$e6
 		!byte $31,$e5
 		!byte $43,$e5
@@ -1622,20 +1624,34 @@ ctable:	!byte $10,$e3								; address-table control routines
 		!byte $30,$e3
 		!byte $10,$e3
 		!byte $10,$e3
-keylen:	!byte $05,$04,$06,$06,$05,$06,$04,$09	; ***** table length of F-keys commands *****
-		!byte $07,$05
-												; ***** table F-key commands *****
-keydef:	!byte $50,$52,$49,$4e,$54						; print
+keylen:	!byte $03,$04,$06,$06,$05,$05,$04,$09	; ***** PATCHED ***** table length of F-keys commands
+		!byte $08,$07
+												; ***** PATCHED *****table F-key commands
+keydef:	!byte $52,$55,$4e								; run
 		!byte $4c,$49,$53,$54							; list
 		!byte $44,$4c,$4f,$41,$44,$22					; dload"
 		!byte $44,$53,$41,$56,$45,$22					; dsave"
-		!byte $44,$4f,$50,$45,$4e						; dopen
-		!byte $44,$43,$4c,$4f,$53,$45					; dclose
-		!byte $43,$4f,$50,$59							; copy
-		!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59		; directory
-		!byte $53,$43,$52,$41,$54,$43,$48				; scratch
+		!byte $50,$52,$49,$4e,$54						; print
 		!byte $43,$48,$52,$24,$28						; chr$(
+		!byte $42,$41,$4e,$4b							; bank
+		!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59		; directory
+		!byte $53,$43,$52,$41,$54,$43,$48,$22			; scratch"
+		!byte $48,$45,$41,$44,$45,$52,$22				; header"
 
+;keylen:	!byte $05,$04,$06,$06,$05,$06,$04,$09	; ***** kernal 04a table length of F-keys commands *****
+;		!byte $07,$05
+												; ***** kernal04a table F-key commands *****
+;keydef:	!byte $50,$52,$49,$4e,$54						; print
+;		!byte $4c,$49,$53,$54							; list
+;		!byte $44,$4c,$4f,$41,$44,$22					; dload"
+;		!byte $44,$53,$41,$56,$45,$22					; dsave"
+;		!byte $44,$4f,$50,$45,$4e						; dopen
+;		!byte $44,$43,$4c,$4f,$53,$45					; dclose
+;		!byte $43,$4f,$50,$59							; copy
+;		!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59		; directory
+;		!byte $53,$43,$52,$41,$54,$43,$48				; scratch
+;		!byte $43,$48,$52,$24,$28						; chr$(
+*= $ec67										; to prevent too long f-key texts!
 keyend:	!byte $80		; ***** bit-table line-link *****	
 		!byte $40
 		!byte $20
@@ -1891,7 +1907,7 @@ VdpCursorToggle:					; ***** sub toggle reverse bit of safed position
 ;		cpx # VdpPaletteDataEnd - VdpPaletteData
 ;		bne - 
 
-; 245-64(font)-29(print)-29(moveline)-21(color)-68(cursor) bytes free
+; 245-64(font)-29(print)-29(moveline)-21(color)-68(cursor) 16 bytes free
 *= $ee00
 		jsr ioinit
 		jsr restor

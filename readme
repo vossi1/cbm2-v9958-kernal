@@ -2,5 +2,5 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
-version 0.6
-- copys font from eprom
+version 0.7
+- added esc-keys for color change
