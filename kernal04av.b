@@ -1,7 +1,9 @@
-; kernal 04av.b
-; cbm2 kernal modified for the v9958 color-graphics-card
-; version 0.2
-; removed unused labels with dasm6502-rul
+; cbm2 kernal 04av.b
+; modified for v9958-cart at $D900-$D907, ROM at $1000
+; comments & copyright Vossi 02/2019
+; version 0.3
+; - crt tables
+; - moved 04a patches
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
@@ -9,7 +11,7 @@
 *= $e000
 		jmp lee09
 		nop
-jcint:	jmp cint		; sub initialize $e044
+jcint:	jmp cint			; sub: initialize $e044
 le007:	jmp le0fe
 le00a:	jmp le179
 le00d:	jmp le299
@@ -36,21 +38,21 @@ le03a:	ldx #$00
 le03f:	ldx #$50
 		ldy #$19
 		rts
-cint:	lda #$00
+cint:	lda #$00		; ***** initialize F-keys & screen *****			
 		ldx #$23
-le048:	sta $c2,x
+le048:	sta $c2,x			; clear key-buffer
 		dex
 		bpl le048
 		ldx #$20
-le04f:	sta $0397,x
+le04f:	sta $0397,x			; clear reverse flags
 		dex
 		bpl le04f
-		lda #$0c
+		lda #$0c			; reset repeat, cursor
 		sta $d8
 		lda #$60
 		sta $d4
 		lda #$2a
-		sta $03b5
+		sta $03b5			; reset address F-keys
 		lda #$e9
 		sta $03b6
 		lda $c0
@@ -73,7 +75,7 @@ le04f:	sta $0397,x
 le08d:	sty $c1
 		ldy #$39
 		jsr le282
-le094:	lda lec2d,y
+le094:	lda lec2d,y			; reset all 10 F-keys to standard
 		dey
 		sta ($c0),y
 		bne le094
@@ -83,9 +85,9 @@ le0a1:	lda lec23,y
 		sta $0382,y
 		dey
 		bne le0a1
-le0aa:	jsr le9c7
-		jsr le251
-		jsr le260
+le0aa:	jsr sreset			; sub: home-home screen window full size
+		jsr txcrt			; set text-mode / sub: switch crt text/graphics
+		jsr crtint			; sub: init crt-controller
 le0b3:	jsr le0c1
 le0b6:	jsr le0cf
 		jsr le227
@@ -154,7 +156,7 @@ le136:	lda $d1
 		jsr le0fe		; moved to patch - input keyboard buffer
 		cmp #$0d
 		bne le129
-		jsr lecdc		; jmp to 04a patch
+		jsr patch4		; jmp to 04a patch
 		nop
 		nop
 		nop
@@ -163,7 +165,7 @@ le136:	lda $d1
 		sta $d0
 		jsr le544
 		stx $0398
-		jsr lecb0
+		jsr patch1
 		sta $d3
 		sta $d2
 		ldy $de
@@ -292,27 +294,27 @@ le244:	jsr le27d
 		jsr le291
 		rts
 		ldy #$10
-		bcs le253
-le251:	ldy #$00
-le253:	sty $cc
+		bcs crtset
+txcrt:	ldy #$00			; set text-mode
+crtset:	sty $cc			; ***** switch crt text/graphics *****
 		lda $de06
 		and #$ef
 		ora $cc
 		sta $de06
 		rts
-le260:	ldy #$11
-		bit $df02
-		bmi le26d
+crtint:	ldy #$11		; ***** init crt-controller *****
+		bit $df02			; triport 2: port reg c
+		bmi crt10
 		ldy #$23
-		bvs le26d
+		bvs crt10
 		ldy #$35
-le26d:	ldx #$11
-le26f:	lda lec6f,y
-		stx $d800
-		sta $d801
+crt10:	ldx #$11
+crt20:	lda atext,y			; codetab 1 for crtc
+		stx $d800			; 6845 address reg
+		sta $d801			; 6845 data reg
 		dey
 		dex
-		bpl le26f
+		bpl crt20
 		rts
 le27d:	pha
 		lda #$3f
@@ -422,7 +424,7 @@ le339:	jsr le587
 		jmp le0b3
 le34f:	cmp $0399
 		bne le357
-		jsr le9c7
+		jsr sreset
 le357:	jmp le0c1
 		ldy $cb
 		bcs le370
@@ -642,7 +644,7 @@ le51e:	stx $039c
 		txa
 		and #$07
 		tax
-		lda lec67,x
+		lda keyend,x
 		pha
 		lda $039c
 		lsr
@@ -1184,7 +1186,7 @@ le959:	rts
 le95a:	tya
 		and #$07
 		tax
-		lda lec67,x
+		lda keyend,x
 		sta $039c
 		tya
 		lsr
@@ -1246,7 +1248,7 @@ le986:	nop
 le9c2:	sta $dd
 		stx $df
 		rts
-le9c7:	lda #$18
+sreset:	lda #$18		; ***** home-home screen window full size *****
 		ldx #$4f
 		jsr le9c2
 		lda #$00
@@ -1588,136 +1590,112 @@ lebe5:	!byte $e3
 lec23:	!byte $e3
 		!byte $05,$04,$06,$06,$05,$06,$04,$09		; table length of F-keys commands
 		!byte $07
-lec2d:	!byte $05
-		!byte $50
-		!byte $52
-		eor #$4e
-		!byte $54
-		jmp $5349
-		!byte $54
-		!byte $44
-		jmp $414f
-		!byte $44
-		!byte $22
-		!byte $44
-		!byte $53
-		eor ($56,x)
-		eor $22
-		!byte $44
-		!byte $4f
-		bvc lec8c
-		lsr $4344
-		jmp $534f
-		eor $43
-		!byte $4f
-		bvc lecab
-		!byte $44
-		eor #$52
-		eor $43
-		!byte $54
-		!byte $4f
-		!byte $52
-		eor $4353,y
-		!byte $52
-		eor ($54,x)
-		!byte $43
-		pha
-		!byte $43
-		pha
-		!byte $52
-		bit $28
-lec67:	!byte $80
-		rti
-		jsr $0810
+lec2d:	!byte $05		; ***** table F-key commands *****
+keydef:	!byte $50,$52,$49,$4e,$54					; print
+		!byte $4c,$49,$53,$54						; list
+		!byte $44,$4c,$4f,$41,$44,$22				; dload"
+		!byte $44,$53,$41,$56,$45,$22				; dsave"
+		!byte $44,$4f,$50,$45,$4e					; dopen
+		!byte $44,$43,$4c,$4f,$53,$45				; dclose
+		!byte $43,$4f,$50,$59						; copy
+		!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59	; directory
+		!byte $53,$43,$52,$41,$54,$43,$48			; scratch
+		!byte $43,$48,$52,$24,$28					; chr$(
+keyend:	!byte $80		; ***** bit-table line-link *****	
+		!byte $40
+		!byte $20
+		!byte $10
+		!byte $08
 		!byte $04
 		!byte $02
 		!byte $01
-lec6f:	!byte $6b		; 6f changed from 03b:$6c 6845 R0 hor. total
+atext:	!byte $6b		; ***** codetab 1 for crtc *****   kernal03b: $6c - 6845 R0 hor. total
 		!byte $50
 		!byte $53
 		!byte $0f
-		ora $1903,y
-		ora $0d00,y
-		rts
-		ora $0000
-		brk
-		brk
-		brk
-		brk
-		ror $6250,x
-		asl
+		!byte $19
+		!byte $03
+		!byte $19
+		!byte $19
+		!byte $00
+		!byte $0d
+		!byte $60
+		!byte $0d
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+ntext:	!byte $7e		; ***** codetab 2 for crtc *****
+		!byte $50
+		!byte $62
+		!byte $0a
 		!byte $1f
-		asl $19
+		!byte $06
+		!byte $19
 		!byte $1c
-		brk
+		!byte $00
 		!byte $07
-		brk
-lec8c:	!byte $07
-		brk
-		brk
-		brk
-		brk
-		brk
-		brk
-		!byte $7f
+		!byte $00
+		!byte $07
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+ptext:	!byte $7f		; ***** codetab 3 for crtc *****
 		!byte $50
 		!byte $60
-		asl
-		rol $01
-		ora $001e,y
+		!byte $0a
+		!byte $26
+		!byte $01
+		!byte $19
+		!byte $1e
+		!byte $00
 		!byte $07
-		brk
+		!byte $00
 		!byte $07
-		brk
-		brk
-		brk
-		brk
-		brk
-		brk
-		!byte $2e		; changed from 03b:$65 not documented
-		tax
-		tax
-		tax
-		tax
-		tax
-lecab:	tax
-		tax
-		tax
-		tax
-		tax
-lecb0:	jsr le536		; new code in 04a 
-		lda #$00		; some additional  patch subroutines
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+		!byte $00
+cksume:	!byte $2e		; ***** checksum rom $e000-$ffff ***** kernal03b: $65
+patch1:	jsr le536		; ***** kernal 04a patch routines - moved from $ecbo to $eca6 *****
+		lda #$00
 		rts
-lecb6:	ora $d0
+patch2:	ora $d0
 		sta $d0
 		lda $dd
 		sta $0398
 		lda $df
 		rts
-lecc2:	bcc lecc7
+patch3:	bcc pat310
 		jmp lf953
-lecc7:	php
+pat310:	php
 		pha
 		lda $a0
 		and #$01
-		beq lecd9
+		beq pat320
 		ldx $9e
 		jsr lffc9
 		jsr lffcc
 		ldx $a6
-lecd9:	pla
+pat320:	pla
 		plp
 		rts
-lecdc:	pha
+patch4:	pha
 		lda #$0a
 		sta $d800
 		lda #$20
 		sta $d801
 		pla
-		rts				; end new code
-
-; **************************************************************************************************
-
+		rts				; end kernal 04a patches
+; $ecdf ********************************************************************************************
+; 33 bytes free
 *= $ed00
 led00:	ldx $dd
 		cpx $dc
@@ -1726,9 +1704,8 @@ led00:	ldx $dd
 		pla
 led08:	bit $039b
 		rts
-
-; **************************************************************************************************
-
+; $ed0b ********************************************************************************************
+; 245 bytes free
 *= $ee00
 		jsr ioinit
 		jsr restor
@@ -2435,7 +2412,7 @@ lf395:	lda $0376
 		sta $a8
 		stx $a6
 		sty $a7
-lf3c1:	jmp lecc2		; jmp to 04a patch - output IO error
+lf3c1:	jmp patch3		; jmp to 04a patch - output IO error
 		nop
 		nop
 		rts
@@ -2551,7 +2528,7 @@ lf49a:	clc
 		jmp lf4b5
 lf4ab:	cmp #$03
 		bne lf4ba
-		jsr lecb6		; jmp to 04a patch - RS232 input
+		jsr patch2		; jmp to 04a patch - RS232 input
 		nop
 		sta $d5
 lf4b5:	jsr le00a
@@ -3195,7 +3172,7 @@ sloop3:	ldy $97
 		sty $03f9
 		tax
 		bpl swarm			; jump to warm start
-		jsr ioinit			; sub: I/O register init $f9fb
+		jsr ioinit			; sub: i/o register init $f9fb
 		lda #$f0
 		sta $c1				; start F-keys
 		jsr jcint			; sub: initialize $e044
@@ -3263,7 +3240,7 @@ lfa5f:	lda #$08
 		ora $de01
 		sta $de01
 		rts
-ramtas:	lda #$00			; ***** ram-test / vector init *****
+ramtas:	lda #$00		; ***** ram-test / vector init *****
 		tax
 lfa8b:	sta $0002,x
 		sta $0200,x
@@ -3868,9 +3845,8 @@ lff2a:	sta ($ac),y
 		rts
 		cli
 		rts
-
-; *************************************************************************************************
-
+; $ff3e *******************************************************************************************
+; 46 bytes free
 *= $ff6c
 		jmp lfe9d
 		jmp lfbca
