@@ -1,9 +1,8 @@
 ; cbm2 kernal 04av.b
 ; modified for v9958-cart at $D900-$D907, ROM at $1000
 ; comments & copyright Vossi 02/2019
-; version 0.9
-; - check VDP-id with esc-key
-; - moved VDP-init to crt-init-sub start
+; version 1.0
+; - fixed id-check to output 3, 5 or x
 ;
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
@@ -14,9 +13,11 @@ FILL					= $00		; fills free memory areas with $00
 VDPREG18				= $0d		; VDP reg 18 value (V/H screen adjust, $0d = Sony PVM 9")
 VDPREG9					= $80|PAL*2	; VDP reg 9 value ($80 = NTSC, $82 = PAL / 212 lines)
 CRTCCURSOR				= $00		; init crtc cursor type $00 = solid, $60 = blink 1/32
-COLREG1					= $a0		; color / background+backdrop color
+COLREG1					= $16		; color / background+backdrop color
+; C64:		0=black		1=white		2=red		3=cyan		4=violet	5=green		6=blue		7=yellow
+; Colors	8=orange	9=brown		a=lightred	b=darkgrey	c=grey		d=litegreen	e=lightblue	f=lightgrey
 ; init-colors: 	0 transparent, 1 black, 2 green, 3 light-green, 4 blue, 5 light-blue, 6 dark-red, 7 cyan
-;				8 red, 9 light-red, a yellow, b light-yellow, c dark-green, d pink, e grey, f white 
+; (TMS compatible)	8 red, 9 light-red, a yellow, b light-yellow, c dark-green, d pink, e grey, f white 
 ; addresses:
 VDPAddress				= $d900
 PatternTable			= $1000
@@ -1887,18 +1888,19 @@ VdpIdent:						; *** read status register and returns vdp ident
 		sta VDPControl						; write new color value
 		lda # (15 | $80)						; 
 		sta VDPControl						; write register 7
+		ldx # '3'							; preload char '3' for V9938
 		pha									; wait for DVP
 		pla
 		lda VDPStatus						; read status
-		and #$04							; isolate bit#4 - 0=v9938, 1=v9958 
-		lsr
-		ldy #$4e
-		clc
-		adc #$33
-		sta $d04e
-		lda #$38
-		sta $d04f
+		and #$3e							; isolate vdp-ident-number bit#1-5 - $00=v9938, $04=v9958 
+		beq prntid							; chip is v9938 - prints a '3'
+		cmp #$04							; chip is v9958 - prints a '5'
+		bne ++		
+		ldx # '5'
+prntid:	stx $d04f
 		rts
+++		tax									; chip is unknown - prints a 'x'
+		bne prntid
 VdpPaletteData:
 		!byte $00,$00,$77,$07,$70,$01,$17,$06	;	0=black		1=white		2=red		3=cyan
 		!byte $56,$02,$32,$06,$06,$02,$72,$07	;	4=violet	5=green		6=blue		7=yellow

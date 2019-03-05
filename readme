@@ -2,6 +2,9 @@ kernal04av.b
 
 cbm2 kernal modified for the v9958 color-graphics-card
 
+version 1.0
+- fixed id-check to output 3, 5 or x
+
 version 0.9
 - check VDP-id with esc-key
 - moved VDP init to crt-init sub-start
