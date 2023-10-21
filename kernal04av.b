@@ -7,41 +7,41 @@
 !cpu 6502
 !ct scr		; standard text/char conversion table -> Screencode (pet = PETSCII, raw)
 ; switches:
-PAL = 1			; PAL=1, NTSC=0		selects V9938/58 PAL RGB-output, NTSC has a higher picture
+PAL = 1		; PAL=1, NTSC=0		selects V9938/58 PAL RGB-output, NTSC has a higher picture
 ; constants:
-FILL					= $00		; fills free memory areas with $00
-VDPREG18				= $0d		; VDP reg 18 value (V/H screen adjust, $0d = Sony PVM 9")
-VDPREG9					= $80|PAL*2	; VDP reg 9 value ($80 = NTSC, $82 = PAL / 212 lines)
-CRTCCURSOR				= $00		; init crtc cursor type $00 = solid, $60 = blink 1/32
-COLREG1					= $16		; color / background+backdrop color
+FILL			= $00		; fills free memory areas with $00
+VDPREG18		= $0d		; VDP reg 18 value (V/H screen adjust, $0d = Sony PVM 9")
+VDPREG9			= $80|PAL*2	; VDP reg 9 value ($80 = NTSC, $82 = PAL / 212 lines)
+CRTCCURSOR		= $00		; init crtc cursor type $00 = solid, $60 = blink 1/32
+COLREG1			= $16		; color / background+backdrop color
 ; C64:		0=black		1=white		2=red		3=cyan		4=violet	5=green		6=blue		7=yellow
 ; Colors	8=orange	9=brown		a=lightred	b=darkgrey	c=grey		d=litegreen	e=lightblue	f=lightgrey
 ; init-colors: 	0 transparent, 1 black, 2 green, 3 light-green, 4 blue, 5 light-blue, 6 dark-red, 7 cyan
 ; (TMS compatible)	8 red, 9 light-red, a yellow, b light-yellow, c dark-green, d pink, e grey, f white 
 ; addresses:
-VDPAddress				= $d900
-PatternTable			= $1000
-ColorTable				= $0a00
-ScreenTable				= $0000
-FontData				= $1800
-FontSize				= $0400
+VDPAddress		= $d900
+PatternTable		= $1000
+ColorTable		= $0a00
+ScreenTable		= $0000
+FontData		= $1800
+FontSize		= $0400
 
-!addr VDPRamWrite		= VDPAddress		; VDP ports
-!addr VDPControl		= VDPAddress+1
-!addr VDPPalette		= VDPAddress+2
-!addr VDPIndirect		= VDPAddress+3
-!addr VDPRamRead		= VDPAddress+4
-!addr VDPStatus			= VDPAddress+5
+!addr VDPRamWrite	= VDPAddress	; VDP ports
+!addr VDPControl	= VDPAddress+1
+!addr VDPPalette	= VDPAddress+2
+!addr VDPIndirect	= VDPAddress+3
+!addr VDPRamRead	= VDPAddress+4
+!addr VDPStatus		= VDPAddress+5
 ; zero page $f0-$ff free space
-!addr vdp_copy_pointer	= $f0;+$f1			; pointer for VdpFont
-!addr vdp_reverse		= $f2				; reverse flag for VdpFont
-!addr vdp_fontaddress	= $f3				; font address for VdpFont
-!addr vdp_color			= $f4				; color register 7 mirror
-!addr vdp_cursor_flag	= $f5				; > $00 = cursor already reverse
-!addr vdp_cursor_char	= $f6				; character under cursor
+!addr vdp_copy_pointer	= $f0;+$f1	; pointer for VdpFont
+!addr vdp_reverse	= $f2		; reverse flag for VdpFont
+!addr vdp_fontaddress	= $f3		; font address for VdpFont
+!addr vdp_color		= $f4		; color register 7 mirror
+!addr vdp_cursor_flag	= $f5		; > $00 = cursor already reverse
+!addr vdp_cursor_char	= $f6		; character under cursor
 
 !initmem FILL
-*= $e000				; ***** jump-table *****
+*= $e000			; ***** jump-table *****
 jmonon:	jmp monoff			; sub: monitor cold-boot (basic off)
 	nop
 jcint:	jmp cint			; sub: initialize $e044
@@ -71,7 +71,7 @@ iobase:	ldx #$00
 scrorg:	ldx #$50
 	ldy #$19
 	rts
-cint:	lda #$00		; ***** initialize F-keys & screen *****			
+cint:	lda #$00			; ***** initialize F-keys & screen *****			
 	ldx #$23
 cloop1:	sta $c2,x			; clear key-buffer
 	dex
@@ -108,7 +108,7 @@ cloop2:	sta $0397,x			; clear reverse flags
 room10:	sty $c1
 	ldy #$39
 	jsr le282
-kyset1:	lda keydef-1,y		; reset all 10 F-keys to standard
+kyset1:	lda keydef-1,y			; reset all 10 F-keys to standard
 	dey
 	sta ($c0),y
 	bne kyset1
@@ -181,19 +181,19 @@ loop4:	jsr prt				; print char and move cursor
 loop3:	ldy #$0a			; reg 10 of 6845
 	lda $d4				; load cursor config
 	sty $d800			; switch 6845 cursor on 
-	jsr VdpCursorSet; ***** PATCHED ***** write cursor (reverse char) to VRAM
+	jsr VdpCursorSet	; ***** PATCHED ***** write cursor (reverse char) to VRAM
 loop3a:	lda $d1				; count of keys in keybuffer
 	ora $d6				; count of pgm key-command
 	beq loop3a			; wait for key
 	sei
-	lda vdp_cursor_char	; load original char under cursor
+	lda vdp_cursor_char		; load original char under cursor
 	jsr VdpCursorClear	; ***** PATCHED ***** restore char under cursor position
-	jsr lp2			; sub: get char from keybuffer
+	jsr lp2				; sub: get char from keybuffer
 	cmp #$0d			; cariage return?
 	bne loop4			; if not cr print char and wait again
 	jsr patch4			; kernal 04a patch - switch 6845 cursor off only after return 
-					; ***** PATCHED ***** removed nop's to insert lda vdp_c+jsr VdpCursorChar
-						; kernal 04a has here 5 nops and moved some lines to patch4
+				; ***** PATCHED ***** removed nop's to insert lda vdp_c+jsr VdpCursorChar
+					; kernal 04a has here 5 nops and moved some lines to patch4
 	sta $d0
 	jsr le544
 	stx $0398
@@ -298,11 +298,11 @@ le216:	pla
 	pla
 	rts
 le21a:	lda #$20
-					; ***** char at cursor position *****
+				; ***** char at cursor position *****
 dspp:	ldy $cb				; load cursor column in Y
 	jsr pagset			; safe indirect bank
 	sta ($c8),y			; write char to screen ($c8 = line start pointer)
-	jmp VdpPrint	; ***** PATCHED ***** print char to VDP screen -> pagres restore bank
+	jmp VdpPrint		; ***** PATCHED ***** print char to VDP screen -> pagres restore bank
 	rts
 
 le227:	ldy $de
@@ -335,7 +335,7 @@ crtset:	sty $cc			; ***** switch crt text/graphics *****
 	lda $de06
 	and #$ef
 	ora $cc
-	jsr VdpFontSwitch	; load font set to VRAM 
+	jsr VdpFontSwitch		; load font set to VRAM 
 	rts
 
 crtint:	jsr VdpInit		; ***** PATCHED ***** sub VDP init
@@ -353,7 +353,7 @@ crt20:	lda atext,y			; codetab 1 for crtc
 	dex
 	bpl crt20
 	rts
-					; ***** safe indirect bank *****
+				; ***** safe indirect bank *****
 pagset:	pha
 	lda #$3f
 	bne le286
@@ -517,7 +517,7 @@ le3c1:	lda ($c4),y
 	cpy $df
 	iny
 	bcc le3c1
-	jmp VdpMoveLine	; ***** PATCHED ***** move line on VDP screen -> pagres restore bank	
+	jmp VdpMoveLine		; ***** PATCHED ***** move line on VDP screen -> pagres restore bank	
 le3cd:	ldx $cf
 	bmi le3d7
 	cpx $ca
@@ -1238,14 +1238,14 @@ le97a:	asl
 	lda escvct,x
 	pha
 	rts
-						; ***** escape-routines table *****		
-escvct:	!byte $22,$ea											; esc, a
-	!byte $ba,$e9											; esc, b
+				; ***** escape-routines table *****		
+escvct:	!byte $22,$ea			; esc, a
+	!byte $ba,$e9			; esc, b
 	!byte $1f,$ea
 	!byte $6c,$e6
 	!byte $ee,$e9
 	!byte $e5,$e9
-	!byte <(VdpTextColor-1),>(VdpTextColor-1)				; ***** PATCHED ***** esc, g $d5,$e9
+	!byte <(VdpTextColor-1),>(VdpTextColor-1)		; ***** PATCHED ***** esc, g $d5,$e9
 	!byte <(VdpBackgroundColor-1),>(VdpBackgroundColor-1)	; ***** PATCHED ***** esc, h $d7,$e9
 	!byte $57,$e6
 	!byte $31,$e5
@@ -1262,7 +1262,7 @@ escvct:	!byte $22,$ea											; esc, a
 	!byte $db,$e9
 	!byte $bc,$e6
 	!byte $ca,$e6
-	!byte <(VdpIdent-1),>(VdpIdent-1)						; ***** PATCHED ***** esc, x $78,$e9
+	!byte <(VdpIdent-1),>(VdpIdent-1)			; ***** PATCHED ***** esc, x $78,$e9
 	!byte $07,$ea
 	!byte $f8,$e9
 
@@ -1386,7 +1386,7 @@ ldtb1:	!byte $d0,$d0,$d0,$d0,$d1,$d1,$d1,$d2		; ***** start address-table  scree
 	!byte $d5,$d5,$d5,$d5,$d6,$d6,$d6,$d7
 	!byte $d7
 
-ctable:	!byte $10,$e3								; ***** address-table control routines *****
+ctable:	!byte $10,$e3					; ***** address-table control routines *****
 	!byte $10,$e3
 	!byte $10,$e3
 	!byte $1b,$e6
@@ -1421,32 +1421,32 @@ ctable:	!byte $10,$e3								; ***** address-table control routines *****
 
 keylen:	!byte $03,$04,$06,$06,$05,$05,$04,$09	; ***** PATCHED ***** table length of F-keys commands
 	!byte $08,$07
-											; ***** PATCHED ***** table F-key commands
-keydef:	!pet "run"				; run
-	!pet "list"				; list
+						; ***** PATCHED ***** table F-key commands
+keydef:	!pet "run"			; run
+	!pet "list"			; list
 	!pet "dload",$22		; dload"
 	!pet "dsave",$22		; dsave"
 	!pet "print"			; print
 	!pet "chr$("			; chr$(
-	!pet "bank"				; bank
+	!pet "bank"			; bank
 	!pet "directory"		; directory
 	!pet "scratch",$22		; scratch"
 	!pet "header",$22		; header"
 
 ;keylen:!byte $05,$04,$06,$06,$05,$06,$04,$09	; ***** kernal 04a table length of F-keys commands *****
 ;	!byte $07,$05
-											; ***** kernal04a table F-key commands *****
-;keydef:!byte $50,$52,$49,$4e,$54						; print
-;	!byte $4c,$49,$53,$54							; list
-;	!byte $44,$4c,$4f,$41,$44,$22					; dload"
-;	!byte $44,$53,$41,$56,$45,$22					; dsave"
-;	!byte $44,$4f,$50,$45,$4e						; dopen
-;	!byte $44,$43,$4c,$4f,$53,$45					; dclose
-;	!byte $43,$4f,$50,$59							; copy
-;	!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59		; directory
-;	!byte $53,$43,$52,$41,$54,$43,$48				; scratch
-;	!byte $43,$48,$52,$24,$28						; chr$(
-*= $ec67										; to prevent too long f-key texts!
+						; ***** kernal04a table F-key commands *****
+;keydef:!byte $50,$52,$49,$4e,$54			; print
+;	!byte $4c,$49,$53,$54				; list
+;	!byte $44,$4c,$4f,$41,$44,$22			; dload"
+;	!byte $44,$53,$41,$56,$45,$22			; dsave"
+;	!byte $44,$4f,$50,$45,$4e			; dopen
+;	!byte $44,$43,$4c,$4f,$53,$45			; dclose
+;	!byte $43,$4f,$50,$59				; copy
+;	!byte $44,$49,$52,$45,$43,$54,$4f,$52,$59	; directory
+;	!byte $53,$43,$52,$41,$54,$43,$48		; scratch
+;	!byte $43,$48,$52,$24,$28			; chr$(
+*= $ec67						; to prevent too long f-key texts!
 keyend:	!byte $80		; ***** bit-table line-link *****	
 	!byte $40
 	!byte $20
@@ -1544,7 +1544,7 @@ patch4:	pha
 	sta $d801
 	pla
 	rts				; end kernal 04a patches
-bszei1:	ldx $dd			; unknown patch
+bszei1:	ldx $dd				; unknown patch
 	cpx $dc
 	bne bszeib
 	pla
@@ -1555,7 +1555,7 @@ bszeib:	bit $039b
 VdpInitData:						; ***** VDP init data table *****
 	!byte $04,$80,$50,$81,$03,$82,$2f,$83
 	!byte $02,$84,COLREG1,$87,$08,$88,VDPREG9,$89
-	!byte $00,$8a,$00,$90,VDPREG18,$92,$00,$40				; last 2 bytes start VRAM write! 
+	!byte $00,$8a,$00,$90,VDPREG18,$92,$00,$40		; last 2 bytes start VRAM write! 
 	; reg  0: $04 mode control 1: text mode 2 (bit#1-3 = M3 - M5)
 	; reg  1: $50 mode control 2: bit#1 16x16 sprites, bit#3-4 = M2-M1, #6 =1: display enable)
 	; reg  2: $03 name (screen) table base address $0000 ( * $400 + bit#0+1 = 1)
@@ -1570,129 +1570,129 @@ VdpInitData:						; ***** VDP init data table *****
 	; reg 14: $00 VRAM write addresss bit#0-2 = A14-A16
 	; reg 16: $00 color palette pointer to color 0
 VdpInitDataEnd:
-VdpFontSwitch:						; ***** switch font text / graphics  *****
-	sta $de06							; tri1 + creg (instruction moved from crtset)
-VdpFont:							; ***** copy font to pattern generator table *****
-	lda # >FontData						; load highbyte font data address
-	ldx $cc								; check flag: $00 = text / $10 = graphic 
-	beq +								; text -> ok
+VdpFontSwitch:				; ***** switch font text / graphics  *****
+	sta $de06				; tri1 + creg (instruction moved from crtset)
+VdpFont:				; ***** copy font to pattern generator table *****
+	lda # >FontData				; load highbyte font data address
+	ldx $cc					; check flag: $00 = text / $10 = graphic 
+	beq +					; text -> ok
 	clc
-	adc # >FontSize						; graphic -> add highbyte fontsize for second fontset 
-+	sta vdp_copy_pointer+1				; set highbyte font data
-	sta vdp_fontaddress					; safe current font start address
+	adc # >FontSize				; graphic -> add highbyte fontsize for second fontset 
++	sta vdp_copy_pointer+1			; set highbyte font data
+	sta vdp_fontaddress			; safe current font start address
 	ldy #$00
-	sty VDPControl						; write lowbyte pattern table to VDP, Y already $00
-	lda # (>PatternTable) | $40			; highbyte pattern table or $40 to start VRAM write 
-	sta VDPControl						; write highbyte pattern table to VDP
-	sty vdp_reverse						; resert data reverse byte
-	sty vdp_copy_pointer				; set lowbyte font data to $00 
-	ldx # (>FontSize) * 2				; copy 2 x font (normal+reverse)
--	lda vdp_reverse						; reverse second half of font with eor
-	eor(vdp_copy_pointer),y				; load font data
-	sta VDPRamWrite						; write to VDP
+	sty VDPControl				; write lowbyte pattern table to VDP, Y already $00
+	lda # (>PatternTable) | $40		; highbyte pattern table or $40 to start VRAM write 
+	sta VDPControl				; write highbyte pattern table to VDP
+	sty vdp_reverse				; resert data reverse byte
+	sty vdp_copy_pointer			; set lowbyte font data to $00 
+	ldx # (>FontSize) * 2			; copy 2 x font (normal+reverse)
+-	lda vdp_reverse				; reverse second half of font with eor
+	eor(vdp_copy_pointer),y			; load font data
+	sta VDPRamWrite				; write to VDP
 	iny
 	bne -
-	inc vdp_copy_pointer+1				; increase higbyte font pointer
+	inc vdp_copy_pointer+1			; increase higbyte font pointer
 	dex
-	beq +								; end of 2 x font data reached?
-	cpx # >FontSize						; first "not reverse" font finished? 
+	beq +					; end of 2 x font data reached?
+	cpx # >FontSize				; first "not reverse" font finished? 
 	bne -
-	lda vdp_fontaddress					; start reverse font at current font start address agin
-	sta vdp_copy_pointer+1				; set highbyte font data start for second "reverse font"
+	lda vdp_fontaddress			; start reverse font at current font start address agin
+	sta vdp_copy_pointer+1			; set highbyte font data start for second "reverse font"
 	lda #$ff
-	sta vdp_reverse						; set reverse xor byte
+	sta vdp_reverse				; set reverse xor byte
 	bne -
 +	rts
-VdpCopyPalette						; ***** copy color-palette *****
--	lda VdpPaletteData,x				; X already 0, palette pointer already 0 from init-data
+VdpCopyPalette				; ***** copy color-palette *****
+-	lda VdpPaletteData,x			; X already 0, palette pointer already 0 from init-data
 	sta VDPPalette
 	inx
 	cpx # VdpPaletteDataEnd - VdpPaletteData
 	bne - 
 	lda # COLREG1
-	sta vdp_color						; write color mirror
+	sta vdp_color				; write color mirror
 	rts
-VdpPrint:							; ***** print char to VRAM *****
-	jsr VdpWriteChar					; sub write char to screen - char in A, column in $cb
-	jmp pagres			; forward -> sub: bank restore
-VdpCursorSet:						; ***** print cursor - inserted in input routine  $e133 *****
-	sta $d801							; 6845 data-reg (instruction moved from input rotine)
-	lda vdp_cursor_flag					; cursor char already reverse
-	bne +								; skip if reverse 
-	ldy $cb								; load cursor column
+VdpPrint:				; ***** print char to VRAM *****
+	jsr VdpWriteChar			; sub write char to screen - char in A, column in $cb
+	jmp pagres				; forward -> sub: bank restore
+VdpCursorSet:				; ***** print cursor - inserted in input routine  $e133 *****
+	sta $d801				; 6845 data-reg (instruction moved from input rotine)
+	lda vdp_cursor_flag			; cursor char already reverse
+	bne +					; skip if reverse 
+	ldy $cb					; load cursor column
 	lda #$00
-	ora($c8),y							; load char under cursur from screen memory
-	sta vdp_cursor_char					; safe char under cursor
-	eor #$80							; reverse char
-	jsr VdpWriteChar					; sub write char to screen - char in A, column in $cb
-	inc vdp_cursor_flag					; set cursor reverse flag
+	ora($c8),y				; load char under cursur from screen memory
+	sta vdp_cursor_char			; safe char under cursor
+	eor #$80				; reverse char
+	jsr VdpWriteChar			; sub write char to screen - char in A, column in $cb
+	inc vdp_cursor_flag			; set cursor reverse flag
 +	rts
-VdpCursorClear:						; ***** restore char under old cursor position 
-	jsr VdpWriteChar					; sub write char to screen - char in A, column in $cb
+VdpCursorClear:				; ***** restore char under old cursor position 
+	jsr VdpWriteChar			; sub write char to screen - char in A, column in $cb
 	lda #$00
-	sta vdp_cursor_flag					; clear cursor reverse flag
+	sta vdp_cursor_flag			; clear cursor reverse flag
 	rts
-VdpWriteChar:						; ***** sub: write char to VRAM for VdpPrint, VdpCursor *****
-	pha									; safe char on stack
-	lda $cb								; load cursor column
+VdpWriteChar:				; ***** sub: write char to VRAM for VdpPrint, VdpCursor *****
+	pha					; safe char on stack
+	lda $cb					; load cursor column
 	clc
-	adc $c8								; add lowbyte screen line pointer
-	sta VDPControl						; write VRAM address lowbyte
+	adc $c8					; add lowbyte screen line pointer
+	sta VDPControl				; write VRAM address lowbyte
 	lda #$00
-	adc $c9								; load highbyte screen line pointer + carry
-	and #$4f							; isolate low nibble + $dx to $4x for VRAM write
-	sta VDPControl						; write VRAM address highbyte
-	pla									; get char back from stack
-;	pha									; 7cycles = 3.5us wait for VDP
-;	pla									; ok without, if no problems (7cycles = 3.5us wait for VDP)
+	adc $c9					; load highbyte screen line pointer + carry
+	and #$4f				; isolate low nibble + $dx to $4x for VRAM write
+	sta VDPControl				; write VRAM address highbyte
+	pla					; get char back from stack
+;	pha					; 7cycles = 3.5us wait for VDP
+;	pla					; ok without, if no problems (7cycles = 3.5us wait for VDP)
 	nop
-	sta VDPRamWrite						; write char to VRAM
+	sta VDPRamWrite				; write char to VRAM
 	rts
-VdpMoveLine:						; ***** move screen line (for scrolling) *****
-	ldy $de								; left screen border
-	lda $c8								; load lowbyte screen line pointer
-	sta VDPControl						; write VRAM address lowbyte
-	lda $c9								; load highbyte screen line pointer
-	and #$4f							; isolate low nibble + $dx to $4x for VRAM write
-	sta VDPControl						; write VRAM address highbyte
-;	pha									; ok without, if no problems (7cycles = 3.5us wait for VDP)
+VdpMoveLine:				; ***** move screen line (for scrolling) *****
+	ldy $de					; left screen border
+	lda $c8					; load lowbyte screen line pointer
+	sta VDPControl				; write VRAM address lowbyte
+	lda $c9					; load highbyte screen line pointer
+	and #$4f				; isolate low nibble + $dx to $4x for VRAM write
+	sta VDPControl				; write VRAM address highbyte
+;	pha					; ok without, if no problems (7cycles = 3.5us wait for VDP)
 ;	pla
--	lda($c4),y							; load char from source line pointer
-	sta VDPRamWrite						; write to new line in VRAM
-	cpy $df								; right screen border reached?
+-	lda($c4),y				; load char from source line pointer
+	sta VDPRamWrite				; write to new line in VRAM
+	cpy $df					; right screen border reached?
 	iny
 	bcc -
-	jmp pagres			; forward -> sub: bank restore
-VdpTextColor:						; ***** ESC-G rotate text-color *****
-	lda vdp_color						; load color mirror
+	jmp pagres				; forward -> sub: bank restore
+VdpTextColor:				; ***** ESC-G rotate text-color *****
+	lda vdp_color				; load color mirror
 	clc
-	adc #$10							; increase high nibble = textxcolor
-	sta vdp_color						; write to mirror
-	!byte $2c							; skips two bytes! bit $xxxx
-VdpBackgroundColor:					; ***** ESC-H rotate text-color *****
-	inc vdp_color						; increase low nibble = background color
-	lda vdp_color						; load color mirror
-	sta VDPControl						; write new color value
-	lda # (7 | $80)						; 
-	sta VDPControl						; write register 7
+	adc #$10				; increase high nibble = textxcolor
+	sta vdp_color				; write to mirror
+	!byte $2c				; skips two bytes! bit $xxxx
+VdpBackgroundColor:			; ***** ESC-H rotate text-color *****
+	inc vdp_color				; increase low nibble = background color
+	lda vdp_color				; load color mirror
+	sta VDPControl				; write new color value
+	lda # (7 | $80)				; 
+	sta VDPControl				; write register 7
 	rts
-VdpIdent:							; ***** ESC-X read status register / vdp ident and print chip-type *****
+VdpIdent:				; ***** ESC-X read status register / vdp ident and print chip-type *****
 	lda # 1
-	sta VDPControl						; write new color value
-	lda # (15 | $80)						; 
-	sta VDPControl						; write register 7
-	ldx # '3'							; preload char '3' for V9938
-	pha									; wait for DVP
+	sta VDPControl				; write new color value
+	lda # (15 | $80)			; 
+	sta VDPControl				; write register 7
+	ldx # '3'				; preload char '3' for V9938
+	pha					; wait for DVP
 	pla
-	lda VDPStatus						; read status
-	and #$3e							; isolate vdp-ident-number bit#1-5 - $00=v9938, $04=v9958 
-	beq prntid							; chip is v9938 - prints a '3'
-	cmp #$04							; chip is v9958 - prints a '5'
+	lda VDPStatus				; read status
+	and #$3e				; isolate vdp-ident-number bit#1-5 - $00=v9938, $04=v9958 
+	beq prntid				; chip is v9938 - prints a '3'
+	cmp #$04				; chip is v9958 - prints a '5'
 	bne ++		
 	ldx # '5'
 prntid:	stx $d04f
 	rts
-++	tax									; chip is unknown - prints a 'x'
+++	tax					; chip is unknown - prints a 'x'
 	bne prntid
 ; ***** Color Palette - 16 colors, 2 byte/color: RB, 0G each 3bit -> C64 VICII-colors *****
 VdpPaletteData:
@@ -2175,7 +2175,7 @@ lf1ba:	jsr lffcc
 	clc
 	jmp lffc3
 
-ms1:	!byte $0d								; ***** system-messages table *****
+ms1:	!byte $0d			; ***** system-messages table *****
 	!pet "i/o error ",$a3,$0d
 	!pet "searching",$a0
 	!pet "for",$a0,$0d
@@ -3092,11 +3092,11 @@ lf98c:	lda #$ff
 lf991:	rol
 	sta $a9
 	rts
-patall:	!byte $c2,$cd		; test-bytes cbm-rom
+patall:	!byte $c2,$cd			; test-bytes cbm-rom
 start:	ldx #$fe		; ***** system reset *****
-	sei					; disable interrrupts
-	txs					; init stack
-	cld					; clear decimal flag
+	sei				; disable interrrupts
+	txs				; init stack
+	cld				; clear decimal flag
 	lda #$a5
 	cmp $03fa			; compare warm start flag
 	bne scold			; jump to cold start
@@ -3115,22 +3115,22 @@ sloop0:	ldy #$03			; init start compare counter to 4th rom ident byte
 	clc
 	adc #$10			; next rom position to check highbyte +$10
 	sta $97
-	inx					; next 4. byte compare value $31, $32, $33...
+	inx				; next 4. byte compare value $31, $32, $33...
 	txa
 	cmp ($96),y			; compare if 4. byte $31 at address $1006+3...
 	bne sloop0			; 4. byte does not mach - > next rom pos. $2000, $3000...
-	dey					; check next byte backwards if 4th byte matches
+	dey				; check next byte backwards if 4th byte matches
 sloop1:	lda ($96),y			; load 3., 2., 1. byte
 	dey
 	bmi sloop3			; 2. + 3. byte matches - autostart rom found!
-	cmp patall,y		; compare test bytes 'M', 'B'
+	cmp patall,y			; compare test bytes 'M', 'B'
 	beq sloop1			; 3. byte OK -> check 2. byte
 	bne sloop0			; 2. or 3. ident byte does not mach -> next rom position
 sloop2:	ldy #$e0			; set warm start to $e000 = monitor cold boot
 	!byte $2c
 sloop3:	ldy $97
 	sty $03f9			; store rom address highbyte to warm start vector
-	tax					; move 1. ident byte to x to set N-flag
+	tax				; move 1. ident byte to x to set N-flag
 	bpl swarm			; jump to warm start if value is positive ('c'=$43)
 	jsr ioinit			; sub: i/o register init $f9fb
 	lda #$f0
@@ -3364,7 +3364,7 @@ lfbca:	stx $03f8
 	lda #$5a
 	sta $03fb
 	rts
-nirq:	pha				; ***** irq-routine *****
+nirq:	pha			; ***** irq-routine *****
 	txa
 	pha
 	tya
@@ -3800,30 +3800,30 @@ lff2a:	sta ($ac),y
 	rts
 ; $ff3e ********************************** cbm2 v9938/58 graphics card *****************************
 VdpInit:				; ***** init VDP - write register and clear VRAM *****
-	ldx #$00							; reset X to first data
-	stx vdp_cursor_flag					; clear cursor flag to show cursor after warm start
--	lda VdpInitData,x					; load data from table
-	sta VDPControl						; write to control port - first value, second reg|80
+	ldx #$00				; reset X to first data
+	stx vdp_cursor_flag			; clear cursor flag to show cursor after warm start
+-	lda VdpInitData,x			; load data from table
+	sta VDPControl				; write to control port - first value, second reg|80
 	inx
 	cpx # VdpInitDataEnd - VdpInitData	; $20 = end of table reached?
-	bne -								; last 2 bytes $00,$40 inits VRAM write at $0000
-	tay									; move last value $40 to Y as $4000 VRAM counter
-	lsr									; shift $40 right for screen table init value=$20 'space'
--	sta VDPRamWrite						; write to VRAM
+	bne -					; last 2 bytes $00,$40 inits VRAM write at $0000
+	tay					; move last value $40 to Y as $4000 VRAM counter
+	lsr					; shift $40 right for screen table init value=$20 'space'
+-	sta VDPRamWrite				; write to VRAM
 	pha 
-	pla									; wait 3+4 cycles = 3.5us for VDP (minimum CS high = 8us)
+	pla					; wait 3+4 cycles = 3.5us for VDP (minimum CS high = 8us)
 	inx
 	bne -
-	cpy #$38							; $900-$20 end of screen table reached 
+	cpy #$38				; $900-$20 end of screen table reached 
 	bne + 
-	txa									; clear color table and rest of VRAM with $00
+	txa					; clear color table and rest of VRAM with $00
 +	dey
-	bne -								; $40 reached? X starts at $20 -> clears only $3fdf bytes
-	jsr VdpCopyPalette					; sub copy color palette (X already $00)
-	jsr VdpFont							; copy font to VRAM
+	bne -					; $40 reached? X starts at $20 -> clears only $3fdf bytes
+	jsr VdpCopyPalette			; sub copy color palette (X already $00)
+	jsr VdpFont				; copy font to VRAM
 
-	ldy #$11							; two instructions moved from crtint to place the jsr
-	bit $df02							; triport 2: port reg c
+	ldy #$11				; two instructions moved from crtint to place the jsr
+	bit $df02				; triport 2: port reg c
 	rts
 ; 1 byte free (46 total)
 *= $ff6c
